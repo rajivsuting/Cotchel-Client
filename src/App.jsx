@@ -65,11 +65,6 @@ function AppContent() {
   const location = useLocation();
   const isSellerDashboard = location.pathname.startsWith("/seller");
 
-  // Initialize CSRF token on app startup
-  useEffect(() => {
-    initializeCSRFToken();
-  }, []);
-
   return (
     <div className="flex flex-col min-h-screen">
       {!isSellerDashboard && <Navbar />}
@@ -94,15 +89,9 @@ function AppContent() {
 
 function App() {
   useEffect(() => {
-    const initCSRF = async () => {
-      const initialized = await initializeCSRFToken();
-      if (initialized) {
-        console.log("[App] CSRF initialized successfully.");
-      } else {
-        console.warn("[App] CSRF initialization failed.");
-      }
-    };
-    initCSRF();
+    (async () => {
+      await initializeCSRFToken();
+    })();
   }, []);
 
   return (
