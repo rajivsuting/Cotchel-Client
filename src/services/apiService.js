@@ -1,67 +1,16 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config/api";
 
-// Create axios instance with CSRF token handling
+// ✅ Create axios instance with automatic CSRF handling
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // Important for cross-origin cookies
+  withCredentials: true, // Necessary for cross-origin cookies
   timeout: 10000,
+  xsrfCookieName: "XSRF-TOKEN", // Automatically reads this cookie
+  xsrfHeaderName: "X-XSRF-TOKEN", // Automatically sends this header
 });
 
-// Utility: Get CSRF token from cookies
-function getCSRFToken() {
-  return document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("XSRF-TOKEN="))
-    ?.split("=")[1];
-}
-
-// Initialize CSRF token on app startup or post-login
-export const initializeCSRFToken = async () => {
-  try {
-    console.log("[CSRF] Initializing...");
-    await api.get("/health");
-    const token = getCSRFToken();
-    console.log("[CSRF] Initialized:", token ? "success" : "failed");
-    return token;
-  } catch (error) {
-    console.error("[CSRF] Init failed on /health, retrying on /auth/me...");
-    try {
-      await api.get("/auth/me");
-      const token = getCSRFToken();
-      console.log("[CSRF] Initialized (retry):", token ? "success" : "failed");
-      return token;
-    } catch (retryError) {
-      console.error("[CSRF] Init failed (retry):", retryError);
-      return null;
-    }
-  }
-};
-
-// List of endpoints that should NOT have CSRF token attached
-const CSRF_IGNORED_ENDPOINTS = [
-  "/auth/login",
-  "/auth/register",
-  "/auth/verify-email",
-  "/auth/resend-otp",
-  "/auth/request-reset",
-  "/auth/reset-password",
-  "/razorpay/webhook",
-  "/shiprocket/webhook",
-  "/health",
-  "/image/upload",
-  "/image/upload-file",
-];
-
-// Utility: Check if CSRF should be ignored
-function isCsrfIgnored(url = "", method = "get") {
-  if (method.toLowerCase() === "get") return true;
-  let cleanUrl = url.startsWith("/") ? url : "/" + url;
-  cleanUrl = cleanUrl.replace(/^\/api/, "");
-  return CSRF_IGNORED_ENDPOINTS.some((ep) => cleanUrl.startsWith(ep));
-}
-
-// Generate unique request ID for tracking
+// Utility: Generate unique request ID
 function generateRequestId() {
   return (
     Math.random().toString(36).substring(2, 15) +
@@ -69,68 +18,42 @@ function generateRequestId() {
   );
 }
 
-// Request interceptor to attach CSRF token and tracking headers
+// 🚩 CSRF initialization on app start/post-login
+export const initializeCSRFToken = async () => {
+  try {
+    console.log("[CSRF] Initializing...");
+    await api.get("/health");
+    // Give the browser a moment to commit the Set-Cookie header
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    console.log("[CSRF] Initialized successfully.");
+    return true;
+  } catch (error) {
+    console.error("[CSRF] Initialization failed:", error);
+    return false;
+  }
+};
+
+// Attach request ID for debugging in local/dev
 api.interceptors.request.use(
-  async (config) => {
-    const method = config.method || "get";
-    const url = config.url || "";
-
-    if (!isCsrfIgnored(url, method)) {
-      let csrfToken = getCSRFToken();
-      if (csrfToken) {
-        config.headers["X-XSRF-TOKEN"] = csrfToken;
-        console.log("[CSRF] Token added:", csrfToken);
-      } else {
-        console.warn(
-          "[CSRF] No token found, calling /health to reinitialize..."
-        );
-        await api.get("/health");
-        const newToken = getCSRFToken();
-        if (newToken) {
-          config.headers["X-XSRF-TOKEN"] = newToken;
-          console.log("[CSRF] Token added after refresh:", newToken);
-        } else {
-          console.error("[CSRF] Token still missing after refresh.");
-        }
-      }
-    }
-
-    // Attach request ID for tracking
+  (config) => {
     if (import.meta.env.DEV || config.baseURL?.includes("localhost")) {
       config.headers["X-Request-ID"] = generateRequestId();
     }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for CSRF error handling and rate limit awareness
+// Response interceptor for CSRF & rate limit awareness
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    checkRateLimit(response);
+    return response;
+  },
   async (error) => {
     const { response } = error;
 
-    if (
-      response?.status === 403 &&
-      response?.data?.error === "Invalid or missing CSRF token"
-    ) {
-      console.log("[CSRF] Invalid token detected, refreshing...");
-      try {
-        await api.get("/health");
-        const csrfToken = getCSRFToken();
-        if (csrfToken && !error.config._retry) {
-          error.config._retry = true;
-          error.config.headers["X-XSRF-TOKEN"] = csrfToken;
-          console.log("[CSRF] Retrying request with refreshed token");
-          return api(error.config);
-        }
-      } catch (refreshError) {
-        console.error("[CSRF] Refresh failed:", refreshError);
-      }
-      return Promise.reject(error);
-    }
-
+    // Handle rate limit alerts
     if (response?.status === 429) {
       const retryAfter = response.headers["retry-after"];
       console.warn(`[Rate Limit] Hit. Retry after ${retryAfter} seconds.`);
@@ -143,7 +66,7 @@ api.interceptors.response.use(
   }
 );
 
-// Enhanced error handler for UI-friendly error messages
+// Handle API errors for UI-friendly messages
 export const handleApiError = (error) => {
   if (error.response) {
     const { status, data } = error.response;
@@ -153,7 +76,7 @@ export const handleApiError = (error) => {
       case 401:
         return "Authentication required. Please log in.";
       case 403:
-        if (data.error === "Invalid or missing CSRF token") {
+        if (data.error?.toLowerCase().includes("csrf")) {
           return "Session expired. Please refresh the page.";
         }
         return data.message || "Access denied.";
@@ -173,7 +96,20 @@ export const handleApiError = (error) => {
   }
 };
 
-// Generalized request wrapper with consistent response
+// Rate limit header utility for monitoring
+export const checkRateLimit = (response) => {
+  const remaining = response.headers["x-ratelimit-remaining"];
+  const reset = response.headers["x-ratelimit-reset"];
+  if (remaining !== undefined) {
+    console.log(`[Rate Limit] Remaining: ${remaining}`);
+    if (reset) {
+      console.log(`[Rate Limit] Reset at: ${new Date(reset * 1000)}`);
+    }
+  }
+  return { remaining, reset };
+};
+
+// Generalized request wrapper with consistent structure
 export const apiRequest = async (config) => {
   try {
     const response = await api(config);
@@ -200,7 +136,7 @@ export const apiDelete = (url, config = {}) =>
 export const apiPatch = (url, data = {}, config = {}) =>
   apiRequest({ method: "PATCH", url, data, ...config });
 
-// Health check utility
+// Health check utility for UI or CI
 export const checkServerHealth = async () => {
   try {
     const response = await api.get("/health");
@@ -208,19 +144,6 @@ export const checkServerHealth = async () => {
   } catch (error) {
     return { success: false, error: handleApiError(error) };
   }
-};
-
-// Rate limit header utility for monitoring
-export const checkRateLimit = (response) => {
-  const remaining = response.headers["x-ratelimit-remaining"];
-  const reset = response.headers["x-ratelimit-reset"];
-  if (remaining !== undefined) {
-    console.log(`[Rate Limit] Remaining: ${remaining}`);
-    if (reset) {
-      console.log(`[Rate Limit] Reset at: ${new Date(reset * 1000)}`);
-    }
-  }
-  return { remaining, reset };
 };
 
 export default api;

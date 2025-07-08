@@ -94,7 +94,15 @@ function AppContent() {
 
 function App() {
   useEffect(() => {
-    initializeCSRFToken();
+    const initCSRF = async () => {
+      const initialized = await initializeCSRFToken();
+      if (initialized) {
+        console.log("[App] CSRF initialized successfully.");
+      } else {
+        console.warn("[App] CSRF initialization failed.");
+      }
+    };
+    initCSRF();
   }, []);
 
   return (
