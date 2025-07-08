@@ -77,15 +77,21 @@ api.interceptors.request.use(
 
     if (!isCsrfIgnored(url, method)) {
       let csrfToken = getCSRFToken();
-      if (!csrfToken) {
-        await initializeCSRFToken();
-        csrfToken = getCSRFToken();
-      }
       if (csrfToken) {
-        console.log("[CSRF] Setting header:", csrfToken);
-        config.headers["X-XSRF-TOKEN"] = csrfToken; // Consistent with csurf
+        config.headers["X-XSRF-TOKEN"] = csrfToken;
+        console.log("[CSRF] Token added:", csrfToken);
       } else {
-        console.warn("[CSRF] No token found, proceeding without header");
+        console.warn(
+          "[CSRF] No token found, calling /health to reinitialize..."
+        );
+        await api.get("/health");
+        const newToken = getCSRFToken();
+        if (newToken) {
+          config.headers["X-XSRF-TOKEN"] = newToken;
+          console.log("[CSRF] Token added after refresh:", newToken);
+        } else {
+          console.error("[CSRF] Token still missing after refresh.");
+        }
       }
     }
 
