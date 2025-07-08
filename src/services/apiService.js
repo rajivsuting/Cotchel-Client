@@ -25,9 +25,9 @@ export const initializeCSRFToken = async () => {
     console.log("[CSRF] Initialized:", token ? "success" : "failed");
     return token;
   } catch (error) {
-    console.error("[CSRF] Init failed on /health, retrying on /api/auth/me...");
+    console.error("[CSRF] Init failed on /health, retrying on /auth/me...");
     try {
-      await api.get("/api/auth/me");
+      await api.get("/auth/me");
       const token = getCSRFToken();
       console.log("[CSRF] Initialized (retry):", token ? "success" : "failed");
       return token;
