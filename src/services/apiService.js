@@ -76,9 +76,10 @@ api.interceptors.request.use(
 
     // Only add CSRF token if not in ignore list
     if (!isCsrfIgnored(url, method)) {
+      // Always ensure a valid CSRF token before any state-changing request
       if (!csrfToken) {
         try {
-          await api.get("health");
+          await initializeCSRFToken();
           csrfToken = getCSRFToken();
         } catch (error) {
           // Ignore error, will fail gracefully
