@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Fix for React Icons SVG width/height warnings */
+svg {
+  width: auto;
+  height: auto;
+}
+
+/* Ensure React Icons display properly */
+.react-icons svg {
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+}
