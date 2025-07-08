@@ -20,7 +20,7 @@ function getCSRFToken() {
 export const initializeCSRFToken = async () => {
   try {
     console.log("Initializing CSRF token...");
-    const response = await api.get("/api/health");
+    const response = await api.get("health");
     const token = getCSRFToken();
     console.log("CSRF token initialized:", token ? "success" : "failed");
     return token;
@@ -28,7 +28,7 @@ export const initializeCSRFToken = async () => {
     console.error("Failed to initialize CSRF token:", error);
     // Try one more time with a different endpoint
     try {
-      const response = await api.get("/api/auth/me");
+      const response = await api.get("auth/me");
       const token = getCSRFToken();
       console.log(
         "CSRF token initialized (retry):",
@@ -42,33 +42,51 @@ export const initializeCSRFToken = async () => {
   }
 };
 
+// List of endpoints that should NOT have CSRF token attached
+const CSRF_IGNORED_ENDPOINTS = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/verify-email",
+  "/auth/resend-otp",
+  "/auth/request-reset",
+  "/auth/reset-password",
+  "/razorpay/webhook",
+  "/shiprocket/webhook",
+  "/health",
+  "/image/upload",
+  "/image/upload-file",
+];
+
+function isCsrfIgnored(url = "", method = "get") {
+  if (method.toLowerCase() === "get") return true;
+  // Normalize url to always start with a slash
+  let cleanUrl = url.startsWith("/") ? url : "/" + url;
+  // Remove /api prefix if present
+  cleanUrl = cleanUrl.replace(/^\/api/, "");
+  // Check if the path matches any ignored endpoint
+  return CSRF_IGNORED_ENDPOINTS.some((ep) => cleanUrl.startsWith(ep));
+}
+
 // Request interceptor to add CSRF token
 api.interceptors.request.use(
   async (config) => {
     let csrfToken = getCSRFToken();
-    console.log(
-      "CSRF token in interceptor:",
-      csrfToken,
-      "for URL:",
-      config.url
-    ); // Debug log
+    const method = config.method || "get";
+    const url = config.url || "";
 
-    if (!csrfToken) {
-      console.log("No CSRF token found, attempting to fetch one...");
-      try {
-        // Try to get a fresh CSRF token for state-changing operations
-        if (config.method !== "get" && config.method !== "GET") {
-          await api.get("/api/health");
+    // Only add CSRF token if not in ignore list
+    if (!isCsrfIgnored(url, method)) {
+      if (!csrfToken) {
+        try {
+          await api.get("health");
           csrfToken = getCSRFToken();
-          console.log("CSRF token fetched:", csrfToken ? "success" : "failed");
+        } catch (error) {
+          // Ignore error, will fail gracefully
         }
-      } catch (error) {
-        console.log("Failed to fetch CSRF token:", error);
       }
-    }
-
-    if (csrfToken) {
-      config.headers["X-CSRF-Token"] = csrfToken;
+      if (csrfToken) {
+        config.headers["X-CSRF-Token"] = csrfToken;
+      }
     }
 
     // Add request ID for tracking (only in development)
@@ -95,7 +113,7 @@ api.interceptors.response.use(
       // Try to refresh CSRF token by making a GET request
       try {
         // Use a simple endpoint that doesn't require authentication
-        await api.get("/api/health"); // This should set CSRF cookie
+        await api.get("health");
         console.log("CSRF token refreshed successfully");
         // Retry the original request once with the new token
         const config = error.config;
