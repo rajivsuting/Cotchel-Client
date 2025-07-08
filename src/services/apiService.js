@@ -20,14 +20,12 @@ function getCSRFToken() {
 export const initializeCSRFToken = async () => {
   try {
     console.log("[CSRF] Initializing...");
-    await api.get("/api/health");
+    await api.get("/health");
     const token = getCSRFToken();
     console.log("[CSRF] Initialized:", token ? "success" : "failed");
     return token;
   } catch (error) {
-    console.error(
-      "[CSRF] Init failed on /api/health, retrying on /api/auth/me..."
-    );
+    console.error("[CSRF] Init failed on /health, retrying on /api/auth/me...");
     try {
       await api.get("/api/auth/me");
       const token = getCSRFToken();
@@ -113,7 +111,7 @@ api.interceptors.response.use(
     ) {
       console.log("[CSRF] Invalid token detected, refreshing...");
       try {
-        await api.get("/api/health");
+        await api.get("/health");
         const csrfToken = getCSRFToken();
         if (csrfToken && !error.config._retry) {
           error.config._retry = true;
@@ -199,7 +197,7 @@ export const apiPatch = (url, data = {}, config = {}) =>
 // Health check utility
 export const checkServerHealth = async () => {
   try {
-    const response = await api.get("/api/health");
+    const response = await api.get("/health");
     return { success: true, data: response.data };
   } catch (error) {
     return { success: false, error: handleApiError(error) };
