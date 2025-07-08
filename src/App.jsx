@@ -93,6 +93,10 @@ function AppContent() {
 }
 
 function App() {
+  useEffect(() => {
+    initializeCSRFToken();
+  }, []);
+
   return (
     <ErrorBoundary>
       <Provider store={store}>
