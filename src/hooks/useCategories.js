@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../services/apiService";
 import { API } from "../config/api";
 
 export const useCategories = () => {
@@ -11,7 +11,7 @@ export const useCategories = () => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(API.CATEGORIES.ALL);
+        const response = await api.get(API.CATEGORIES.ALL);
         if (response.data.success && Array.isArray(response.data.data)) {
           // Ensure each category has a subCategories array
           const formattedCategories = response.data.data.map((category) => ({

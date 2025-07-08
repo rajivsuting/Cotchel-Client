@@ -86,7 +86,10 @@ api.interceptors.request.use(
         }
       }
       if (csrfToken) {
+        console.log("Setting X-CSRF-Token header:", csrfToken);
         config.headers["X-CSRF-Token"] = csrfToken;
+      } else {
+        console.warn("No CSRF token found, not setting X-CSRF-Token header");
       }
     }
 

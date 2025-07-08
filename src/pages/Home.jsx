@@ -201,11 +201,10 @@ const Home = () => {
       try {
         setActionLoading((prev) => ({ ...prev, cart: true }));
         setLoadingProductId(productId);
-        const response = await api.post(
-          API.CART.ADD_ITEM,
-          { productId, quantity: 1 },
-          { withCredentials: true }
-        );
+        const response = await api.post(API.CART.ADD_ITEM, {
+          productId,
+          quantity: 1,
+        });
 
         if (response.status === 401) {
           toast.info("Please sign in to add items to cart");

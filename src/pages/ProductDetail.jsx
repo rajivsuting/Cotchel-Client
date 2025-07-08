@@ -84,11 +84,7 @@ const ProductDetail = () => {
       setActionLoading((prev) => ({ ...prev, cart: true }));
       setLoadingProductId(product._id);
       // Add product to cart (or update quantity if already in cart)
-      await api.post(
-        API.CART.ADD_ITEM,
-        { productId: id, quantity },
-        { withCredentials: true }
-      );
+      await api.post(API.CART.ADD_ITEM, { productId: id, quantity });
       // Navigate to address selection for buy now flow
       navigate("/address-selection", { state: { from: "buy-now" } });
     } catch (error) {
@@ -150,11 +146,10 @@ const ProductDetail = () => {
         return;
       }
 
-      const response = await api.post(
-        API.CART.ADD_ITEM,
-        { productId: id, quantity },
-        { withCredentials: true }
-      );
+      const response = await api.post(API.CART.ADD_ITEM, {
+        productId: id,
+        quantity,
+      });
 
       if (response.data.success) {
         dispatch(addToCart(response.data.data));
