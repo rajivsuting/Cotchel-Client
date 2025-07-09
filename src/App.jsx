@@ -24,7 +24,6 @@ import SellerDashboardLayout from "./layouts/SellerDashboardLayout";
 import { useRoutes } from "react-router-dom";
 import { routes } from "./routes/index";
 import axios from "axios";
-import { initializeCSRFToken } from "./services/apiService";
 axios.defaults.withCredentials = true;
 axios.defaults.headers.common["Content-Type"] = "application/json";
 
@@ -89,9 +88,7 @@ function AppContent() {
 
 function App() {
   useEffect(() => {
-    (async () => {
-      await initializeCSRFToken();
-    })();
+    // No longer needed as CSRF token is handled by axios defaults
   }, []);
 
   return (
