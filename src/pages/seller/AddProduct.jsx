@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../../services/apiService";
-import { API, API_CONFIG } from "../../config/api";
+import { API } from "../../config/api";
 import { ChevronDown } from "lucide-react";
 
 const initialState = {
@@ -22,6 +22,17 @@ const initialState = {
   height: "",
   weight: "",
   files: [],
+};
+
+// Helper to upload files to the server using API endpoints from config/api.js
+const uploadFiles = async (endpoint, files, fieldName = "images") => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append(fieldName, file));
+  const response = await api.post(endpoint, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    withCredentials: true,
+  });
+  return response.data;
 };
 
 const AddProduct = () => {
@@ -104,21 +115,72 @@ const AddProduct = () => {
     });
   };
 
-  const handleImageChange = (e) => {
+  // Immediate upload for featured image
+  const handleFeaturedImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await uploadFiles(API.IMAGE.UPLOAD, [file]);
+      if (data.imageUrls && data.imageUrls.length > 0) {
+        setForm((prev) => ({ ...prev, featuredImage: data.imageUrls[0] }));
+      } else {
+        setError("Failed to upload featured image");
+      }
+    } catch (err) {
+      setError("Failed to upload featured image");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Immediate upload for images
+  const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
     if (form.images.length + files.length > 10) {
       setError("Maximum 10 images allowed");
       return;
     }
-    setForm((prev) => ({ ...prev, images: [...prev.images, ...files] }));
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await uploadFiles(API.IMAGE.UPLOAD, files);
+      if (data.imageUrls && data.imageUrls.length > 0) {
+        setForm((prev) => ({
+          ...prev,
+          images: [...prev.images, ...data.imageUrls],
+        }));
+      } else {
+        setError("Failed to upload images");
+      }
+    } catch (err) {
+      setError("Failed to upload images");
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleFeaturedImageChange = (e) => {
-    const file = e.target.files[0];
-    setForm((prev) => ({ ...prev, featuredImage: file }));
-  };
-  const handleFileChange = (e) => {
+
+  // Immediate upload for file attachments
+  const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
-    setForm((prev) => ({ ...prev, files: [...prev.files, ...files] }));
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await uploadFiles(API.IMAGE.UPLOAD_FILE, files, "files");
+      if (data.fileUrls && data.fileUrls.length > 0) {
+        setForm((prev) => ({
+          ...prev,
+          files: [...prev.files, ...data.fileUrls],
+        }));
+      } else {
+        setError("Failed to upload files");
+      }
+    } catch (err) {
+      setError("Failed to upload files");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const removeImage = (idx) => {
@@ -135,6 +197,10 @@ const AddProduct = () => {
   };
 
   const validateForm = () => {
+    // Auto-trim and filter out empty highlights
+    const trimmedHighlights = form.keyHighLights
+      .map((h) => h.trim())
+      .filter((h) => h);
     let errors = {};
     if (!form.title.trim()) errors.title = "Title is required";
     if (!form.brand.trim()) errors.brand = "Brand is required";
@@ -167,32 +233,49 @@ const AddProduct = () => {
       errors.weight = "Valid weight is required";
     if (!form.description.trim())
       errors.description = "Description is required";
-    if (!form.keyHighLights.length || form.keyHighLights.some((h) => !h.trim()))
-      errors.keyHighLights = "All key highlights are required";
-    if (form.keyHighLights.some((h) => h.length > 100))
+    if (!trimmedHighlights.length)
+      errors.keyHighLights = "At least one key highlight is required";
+    if (trimmedHighlights.some((h) => h.length > 100))
       errors.keyHighLights = "Each key highlight must be under 100 characters";
     if (!form.featuredImage)
       errors.featuredImage = "Featured image is required";
     if (form.images.length > 10)
       errors.images = "Maximum 10 other images allowed";
-    if (form.images.some((img) => img.size > 2 * 1024 * 1024))
+    if (
+      form.images.some(
+        (img) => img instanceof File && img.size > 2 * 1024 * 1024
+      )
+    )
       errors.images = "Each image must be under 2MB";
     if (
-      form.images.some((img) => !["image/jpeg", "image/png"].includes(img.type))
+      form.images.some(
+        (img) =>
+          img instanceof File && !["image/jpeg", "image/png"].includes(img.type)
+      )
     )
       errors.images = "Only JPG/PNG images allowed";
-    if (form.featuredImage && form.featuredImage.size > 2 * 1024 * 1024)
+    if (
+      form.featuredImage &&
+      form.featuredImage instanceof File &&
+      form.featuredImage.size > 2 * 1024 * 1024
+    )
       errors.featuredImage = "Featured image must be under 2MB";
     if (
       form.featuredImage &&
+      form.featuredImage instanceof File &&
       !["image/jpeg", "image/png"].includes(form.featuredImage.type)
     )
       errors.featuredImage = "Featured image must be JPG or PNG";
-    if (form.files.some((file) => file.size > 5 * 1024 * 1024))
+    if (
+      form.files.some(
+        (file) => file instanceof File && file.size > 5 * 1024 * 1024
+      )
+    )
       errors.files = "Each file must be under 5MB";
     if (
       form.files.some(
         (file) =>
+          file instanceof File &&
           ![
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -206,20 +289,41 @@ const AddProduct = () => {
       )
     )
       errors.files = "Invalid file type for attachments";
+    console.log("Validation errors:", errors, form);
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
+    console.log("submit");
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
     if (!validateForm()) {
       return;
     }
+    console.log("submit2");
     setLoading(true);
     try {
-      await api.post(API.PRODUCTS.ALL, form);
+      // Prepare payload for backend
+      const payload = {
+        ...form,
+        fileAttachments: form.files,
+        files: undefined,
+        price: Number(form.price),
+        compareAtPrice: form.compareAtPrice
+          ? Number(form.compareAtPrice)
+          : undefined,
+        quantityAvailable: Number(form.quantityAvailable),
+        lotSize: form.lotSize ? Number(form.lotSize) : undefined,
+        length: Number(form.length),
+        breadth: Number(form.breadth),
+        height: Number(form.height),
+        weight: Number(form.weight),
+      };
+      console.log(payload);
+      await api.post(API.PRODUCTS.ALL, payload);
       setSuccess("Product added successfully!");
       setForm(initialState);
       setValidationErrors({});
@@ -518,6 +622,78 @@ const AddProduct = () => {
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Length (cm) *
+            </label>
+            <input
+              type="number"
+              name="length"
+              value={form.length}
+              onChange={handleChange}
+              min={0}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            {validationErrors.length && (
+              <div className="text-red-500 text-xs mt-1">
+                {validationErrors.length}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Breadth (cm) *
+            </label>
+            <input
+              type="number"
+              name="breadth"
+              value={form.breadth}
+              onChange={handleChange}
+              min={0}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            {validationErrors.breadth && (
+              <div className="text-red-500 text-xs mt-1">
+                {validationErrors.breadth}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Height (cm) *
+            </label>
+            <input
+              type="number"
+              name="height"
+              value={form.height}
+              onChange={handleChange}
+              min={0}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            {validationErrors.height && (
+              <div className="text-red-500 text-xs mt-1">
+                {validationErrors.height}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Weight (g) *
+            </label>
+            <input
+              type="number"
+              name="weight"
+              value={form.weight}
+              onChange={handleChange}
+              min={0}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            {validationErrors.weight && (
+              <div className="text-red-500 text-xs mt-1">
+                {validationErrors.weight}
+              </div>
+            )}
+          </div>
         </div>
         <h3 className="text-lg font-semibold text-gray-700 mb-2 mt-6">
           Description
@@ -624,7 +800,7 @@ const AddProduct = () => {
           <div
             className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
             onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
+            onDrop={async (e) => {
               e.preventDefault();
               const file = Array.from(e.dataTransfer.files).find((f) =>
                 f.type.startsWith("image/")
@@ -634,7 +810,23 @@ const AddProduct = () => {
                 setError("Featured image must be under 2MB");
                 return;
               }
-              setForm((prev) => ({ ...prev, featuredImage: file }));
+              setLoading(true);
+              setError(null);
+              try {
+                const data = await uploadFiles(API.IMAGE.UPLOAD, [file]);
+                if (data.imageUrls && data.imageUrls.length > 0) {
+                  setForm((prev) => ({
+                    ...prev,
+                    featuredImage: data.imageUrls[0],
+                  }));
+                } else {
+                  setError("Failed to upload featured image");
+                }
+              } catch (err) {
+                setError("Failed to upload featured image");
+              } finally {
+                setLoading(false);
+              }
             }}
             onClick={() =>
               document.getElementById("featured-image-input").click()
@@ -653,15 +845,23 @@ const AddProduct = () => {
             />
           </div>
           {form.featuredImage && (
-            <img
-              src={
-                form.featuredImage instanceof File
-                  ? URL.createObjectURL(form.featuredImage)
-                  : form.featuredImage
-              }
-              alt="Featured Preview"
-              className="mt-2 w-24 h-24 object-cover rounded"
-            />
+            <div className="relative inline-block mt-2">
+              <img
+                src={form.featuredImage}
+                alt="Featured Preview"
+                className="w-24 h-24 object-cover rounded"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({ ...prev, featuredImage: "" }))
+                }
+                className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow"
+                title="Remove featured image"
+              >
+                ×
+              </button>
+            </div>
           )}
           {validationErrors.featuredImage && (
             <div className="text-red-500 text-xs mt-1">
@@ -675,7 +875,7 @@ const AddProduct = () => {
             <div
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
               onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
+              onDrop={async (e) => {
                 e.preventDefault();
                 const files = Array.from(e.dataTransfer.files).filter((f) =>
                   f.type.startsWith("image/")
@@ -684,10 +884,23 @@ const AddProduct = () => {
                   setError("Maximum 10 images allowed");
                   return;
                 }
-                setForm((prev) => ({
-                  ...prev,
-                  images: [...prev.images, ...files],
-                }));
+                setLoading(true);
+                setError(null);
+                try {
+                  const data = await uploadFiles(API.IMAGE.UPLOAD, files);
+                  if (data.imageUrls && data.imageUrls.length > 0) {
+                    setForm((prev) => ({
+                      ...prev,
+                      images: [...prev.images, ...data.imageUrls],
+                    }));
+                  } else {
+                    setError("Failed to upload images");
+                  }
+                } catch (err) {
+                  setError("Failed to upload images");
+                } finally {
+                  setLoading(false);
+                }
               }}
               onClick={() =>
                 document.getElementById("other-images-input").click()
@@ -712,7 +925,7 @@ const AddProduct = () => {
               {form.images.map((img, idx) => (
                 <div key={idx} className="relative">
                   <img
-                    src={img instanceof File ? URL.createObjectURL(img) : img}
+                    src={img}
                     alt={`Preview ${idx + 1}`}
                     className="w-16 h-16 object-cover rounded"
                   />

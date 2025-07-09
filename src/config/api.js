@@ -88,6 +88,11 @@ export const API = {
     MARK_AS_READ: (id) => `${API_BASE_URL}/notifications/${id}/read`,
     MARK_ALL_AS_READ: `${API_BASE_URL}/notifications/seller/read-all`,
   },
+  // Image upload endpoints
+  IMAGE: {
+    UPLOAD: `${API_BASE_URL}/image/upload`,
+    UPLOAD_FILE: `${API_BASE_URL}/image/upload-file`,
+  },
 };
 
 export const API_CONFIG = {
