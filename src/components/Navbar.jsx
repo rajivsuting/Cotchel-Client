@@ -134,12 +134,19 @@ const Navbar = () => {
       if (query.trim().length > 0) {
         try {
           setIsLoadingSuggestions(true);
+          // --- DEBUG: Log the query being sent
+          console.log("Searching for:", query);
+
           const response = await api.get(
             `${API.PRODUCTS.ENHANCED_SUGGESTIONS}?query=${encodeURIComponent(
               query
-            )}`,
-            API_CONFIG
+            )}`
           );
+
+          // --- DEBUG: Log the API response
+          console.log("Search API response:", response);
+
+          // Defensive: Check for data shape
           if (response.data && response.data.data) {
             setSearchSuggestions(response.data.data.suggestions || []);
             setSearchProducts(response.data.data.products || []);
