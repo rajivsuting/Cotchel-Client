@@ -1,25 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  FaUser,
-  FaShoppingBag,
-  FaHeart,
-  FaMapMarkerAlt,
-  FaUserPlus,
-} from "react-icons/fa";
+import { FaUser, FaShoppingBag, FaHeart, FaHome } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/apiService";
 import { API, handleApiError } from "../config/api";
 import { useState } from "react";
 
 const navItems = [
-  { label: "Profile", icon: <FaUser />, path: "/buyer/profile" },
+  { label: "Home", icon: <FaHome />, path: "/" },
   { label: "Orders", icon: <FaShoppingBag />, path: "/buyer/orders" },
   { label: "Wishlist", icon: <FaHeart />, path: "/buyer/wishlist" },
-  {
-    label: "Addresses",
-    icon: <FaMapMarkerAlt />,
-    path: "/buyer/manage-address",
-  },
+  { label: "Profile", icon: <FaUser />, path: "/buyer/profile" },
 ];
 
 const BuyerBottomNav = () => {
@@ -65,7 +55,6 @@ const BuyerBottomNav = () => {
             </Link>
           );
         })}
-        {/* Switch to Seller Button removed from here */}
       </div>
     </nav>
   );

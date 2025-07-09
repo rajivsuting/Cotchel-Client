@@ -307,10 +307,10 @@ const AddProduct = () => {
     setLoading(true);
     try {
       // Prepare payload for backend
+      const { files, ...rest } = form;
       const payload = {
-        ...form,
-        fileAttachments: form.files,
-        files: undefined,
+        ...rest,
+        fileAttachments: files,
         price: Number(form.price),
         compareAtPrice: form.compareAtPrice
           ? Number(form.compareAtPrice)

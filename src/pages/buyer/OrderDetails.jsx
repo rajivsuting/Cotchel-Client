@@ -1,6 +1,7 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useGetOrderByIdQuery } from "../../redux/api/orderApi";
+import api from "../../services/apiService";
+import { API } from "../../config/api";
 import {
   FiPackage,
   FiTruck,
@@ -12,7 +13,56 @@ import LoadingState from "../../components/LoadingState";
 
 const OrderDetails = () => {
   const { orderId } = useParams();
-  const { data, isLoading, error } = useGetOrderByIdQuery(orderId);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!orderId) {
+      setError("Invalid order ID");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    api
+      .get(API.ORDERS.GET(orderId))
+      .then((res) => {
+        setOrder(res.data.order);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err.response?.data?.message || "Error loading order details");
+      })
+      .finally(() => setLoading(false));
+  }, [orderId]);
+
+  if (loading) return <LoadingState />;
+  if (error)
+    return (
+      <div className="text-center py-8">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">{error}</h2>
+        <Link
+          to="/buyer/orders"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#0D0B46] hover:bg-[#23206a]"
+        >
+          Back to Orders
+        </Link>
+      </div>
+    );
+  if (!order)
+    return (
+      <div className="text-center py-8">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          Order not found
+        </h2>
+        <Link
+          to="/buyer/orders"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#0D0B46] hover:bg-[#23206a]"
+        >
+          Back to Orders
+        </Link>
+      </div>
+    );
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -43,44 +93,6 @@ const OrderDetails = () => {
         return <FiPackage className="w-5 h-5" />;
     }
   };
-
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          {error.data?.message || "Error loading order details"}
-        </h2>
-        <Link
-          to="/buyer/orders"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#0D0B46] hover:bg-[#23206a]"
-        >
-          Back to Orders
-        </Link>
-      </div>
-    );
-  }
-
-  const order = data?.order;
-
-  if (!order) {
-    return (
-      <div className="text-center py-8">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          Order not found
-        </h2>
-        <Link
-          to="/buyer/orders"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#0D0B46] hover:bg-[#23206a]"
-        >
-          Back to Orders
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

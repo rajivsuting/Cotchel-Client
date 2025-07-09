@@ -13,6 +13,7 @@ import {
   FaFire,
   FaSearch,
   FaUserPlus,
+  FaMapMarkerAlt,
 } from "react-icons/fa";
 import {
   BsSearch,
@@ -1431,6 +1432,17 @@ const Navbar = () => {
                 <BsHeart className="h-4 w-4" />
                 <span>Wishlist</span>
               </Link>
+              {/* Addresses link for buyers only */}
+              {user && user.role === "Buyer" && (
+                <Link
+                  to="/buyer/manage-address"
+                  className="flex items-center gap-2 py-2.5 px-4 text-[#0D0B46] hover:bg-gray-50 rounded-lg font-medium cursor-pointer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <FaMapMarkerAlt className="h-4 w-4" />
+                  <span>Addresses</span>
+                </Link>
+              )}
 
               <button
                 className="flex items-center gap-2 py-2.5 px-4 text-[#0D0B46] hover:bg-gray-50 rounded-lg font-medium cursor-pointer w-full text-left"
