@@ -1,8 +1,8 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   // "https://cotchel-server-tvye7.ondigitalocean.app/api";
-  "https://starfish-app-6q6ot.ondigitalocean.app/api";
-// "http://localhost:5000/api";
+  // "https://starfish-app-6q6ot.ondigitalocean.app/api";
+  "http://localhost:5000/api";
 
 export const API = {
   // Auth endpoints
