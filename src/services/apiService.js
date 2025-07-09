@@ -7,7 +7,7 @@ const api = axios.create({
   withCredentials: true, // Necessary for cross-origin cookies
   timeout: 10000,
   xsrfCookieName: "XSRF-TOKEN", // Automatically reads this cookie
-  xsrfHeaderName: "X-XSRF-TOKEN", // Automatically sends this header
+  xsrfHeaderName: "X-CSRF-Token", // Changed to match backend expectation
 });
 
 // Utility: Generate unique request ID
@@ -22,9 +22,24 @@ function generateRequestId() {
 export const initializeCSRFToken = async () => {
   try {
     console.log("[CSRF] Initializing...");
-    await api.get("/health");
+    const response = await api.get("/health");
+    console.log("[CSRF] Health response:", response.status);
+
     // Give the browser a moment to commit the Set-Cookie header
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Check if CSRF token is now available
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("XSRF-TOKEN="))
+      ?.split("=")[1];
+
+    console.log(
+      "[CSRF] Token after initialization:",
+      token ? "Present" : "Missing"
+    );
+    console.log("[CSRF] All cookies:", document.cookie);
+
     console.log("[CSRF] Initialized successfully.");
     return true;
   } catch (error) {
@@ -39,6 +54,20 @@ api.interceptors.request.use(
     if (import.meta.env.DEV || config.baseURL?.includes("localhost")) {
       config.headers["X-Request-ID"] = generateRequestId();
     }
+    
+    // Debug CSRF token for state-changing requests
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())) {
+      const token = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("XSRF-TOKEN="))
+        ?.split("=")[1];
+      
+      console.log(`[CSRF] ${config.method} ${config.url} - Token:`, token ? "Present" : "Missing");
+      if (!token) {
+        console.warn(`[CSRF] Missing token for ${config.method} ${config.url}`);
+      }
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -52,6 +81,21 @@ api.interceptors.response.use(
   },
   async (error) => {
     const { response } = error;
+
+    // Handle CSRF errors
+    if (response?.status === 403 && response?.data?.error === "Invalid or missing CSRF token") {
+      console.error("[CSRF] Token validation failed for:", error.config?.url);
+      console.error("[CSRF] Request headers:", error.config?.headers);
+      console.error("[CSRF] Available cookies:", document.cookie);
+      
+      // Try to reinitialize CSRF token
+      try {
+        console.log("[CSRF] Attempting to reinitialize token...");
+        await initializeCSRFToken();
+      } catch (reinitError) {
+        console.error("[CSRF] Failed to reinitialize:", reinitError);
+      }
+    }
 
     // Handle rate limit alerts
     if (response?.status === 429) {
