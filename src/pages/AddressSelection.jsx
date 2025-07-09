@@ -260,7 +260,7 @@ const AddressSelection = () => {
 
     try {
       setLoading(true);
-      const response = await api.post(API.ADDRESS.ADD, newAddress);
+      const response = await api.post(API.ADDRESS.CREATE, newAddress);
       if (response.data.message) {
         await fetchAddresses();
         setFormVisible(false);
