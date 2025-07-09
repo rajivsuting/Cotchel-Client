@@ -32,6 +32,16 @@ const ProductCard = memo(
       return text.length > 20 ? text.substring(0, 20) + "..." : text;
     };
 
+    // Responsive title truncation
+    const getResponsiveTitle = () => {
+      if (window.innerWidth <= 640) {
+        // Mobile (sm and below)
+        return title.length > 12 ? title.substring(0, 12) + "..." : title;
+      }
+      // Desktop/tablet
+      return truncateTitle(title);
+    };
+
     return (
       <Link
         to={`/product/${id}`}
@@ -73,7 +83,7 @@ const ProductCard = memo(
                 className="text-gray-800 font-medium text-sm flex-1 mr-2 group-hover:text-[#0D0B46] transition-colors"
                 title={title}
               >
-                {truncateTitle(title)}
+                {getResponsiveTitle()}
               </h2>
               <div className="flex items-center bg-orange-400 px-2 py-1 rounded shrink-0">
                 <FaStar className="w-3.5 h-3.5 text-white" />

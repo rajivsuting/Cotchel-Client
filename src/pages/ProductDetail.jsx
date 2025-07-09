@@ -547,7 +547,7 @@ const ProductDetail = () => {
 
           <section className="w-full mt-12">
             {/* Tab Navigation */}
-            <div className="w-[31.77%] mx-auto flex justify-between mb-10">
+            <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto flex justify-between mb-10 overflow-x-auto flex-nowrap md:overflow-x-visible md:flex-wrap">
               <button
                 className={`px-6 py-2 mr-4 border-b-2 2xl:text-[24px] xl:text-[18px] font-medium ${
                   activeTab === "description"
@@ -582,7 +582,7 @@ const ProductDetail = () => {
 
             {/* Tab Content */}
             {activeTab === "description" && (
-              <div className="w-[61.6%] text-center mt-[38px] mx-auto">
+              <div className="w-full max-w-2xl text-center mt-8 mx-auto px-2">
                 {product.description ? (
                   <p className="text-[#191919] 2xl:text-[18px] xl:text-[14px]">
                     {product.description}
@@ -596,7 +596,7 @@ const ProductDetail = () => {
             )}
 
             {activeTab === "specification" && (
-              <div className="w-[40%] bg-white p-6 mt-10 mx-auto">
+              <div className="w-full max-w-lg bg-white p-6 mt-10 mx-auto px-2">
                 {product.fileAttachments &&
                 product.fileAttachments.length > 0 ? (
                   <ul className="space-y-3">

@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import ProtectedRoute, { NotSellerRoute } from "../components/ProtectedRoute";
 import BuyerDashboardLayout from "../layouts/BuyerDashboardLayout";
 import SellerDashboardLayout from "../layouts/SellerDashboardLayout";
+import CustomerSupport from "../pages/CustomerSupport";
 
 // Lazy load components
 const Home = lazy(() => import("../pages/Home"));
@@ -198,6 +199,14 @@ export const routes = [
     element: (
       <LazyRoute>
         <Contact />
+      </LazyRoute>
+    ),
+  },
+  {
+    path: "/customer-support",
+    element: (
+      <LazyRoute>
+        <CustomerSupport />
       </LazyRoute>
     ),
   },

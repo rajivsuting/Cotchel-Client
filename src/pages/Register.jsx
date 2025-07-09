@@ -6,6 +6,7 @@ import { API } from "../config/api";
 import { FcGoogle } from "react-icons/fc";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import { toast } from "react-toastify";
+import { useAuth } from "../context/AuthContext";
 
 const steps = ["Basic Info", "OTP Verification", "Additional Info"];
 
@@ -150,6 +151,7 @@ const RegisterContent = () => {
   const [googleUser, setGoogleUser] = useState(null);
   const navigate = useNavigate();
   const otpRefs = Array.from({ length: 6 }, () => useRef());
+  const { setUser } = useAuth();
 
   const passwordRegex =
     /^(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -351,6 +353,7 @@ const RegisterContent = () => {
         const result = await googleAuth(res["code"]);
         if (result.data.success) {
           const user = result.data.user;
+          setUser(user); // Set user in context
           // Check for missing required fields
           if (!user.phoneNumber || !user.gender) {
             setGoogleUser(user);
@@ -720,6 +723,16 @@ const RegisterContent = () => {
           </div>
         </div>
       </div>
+      {showCompleteProfile && googleUser && (
+        <CompleteProfileModal
+          user={googleUser}
+          onComplete={() => {
+            setShowCompleteProfile(false);
+            toast.success("Profile completed successfully!");
+            navigate("/");
+          }}
+        />
+      )}
     </div>
   );
 };

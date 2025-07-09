@@ -12,6 +12,7 @@ import {
   FaHistory,
   FaFire,
   FaSearch,
+  FaUserPlus,
 } from "react-icons/fa";
 import {
   BsSearch,
@@ -24,6 +25,7 @@ import {
   BsClock,
 } from "react-icons/bs";
 import { HiOutlineMenuAlt4 } from "react-icons/hi";
+import { IoMdMenu } from "react-icons/io";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCategories } from "../hooks/useCategories";
@@ -33,7 +35,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setCartCount } from "../redux/slices/cartSlice";
 
 const Navbar = () => {
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, logout, user, checkAuth } = useAuth();
   console.log(user);
   const {
     categories = [],
@@ -70,6 +72,8 @@ const Navbar = () => {
   const searchTimeoutRef = useRef(null);
   const dispatch = useDispatch();
   const cartCount = useSelector((state) => state.cart.count);
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState("");
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -408,6 +412,16 @@ const Navbar = () => {
     }
   };
 
+  const handleApiError = (err) => {
+    if (err.response?.data?.message) {
+      return err.response.data.message;
+    } else if (err.message) {
+      return err.message;
+    } else {
+      return "An unexpected error occurred.";
+    }
+  };
+
   return (
     <nav
       className={`w-full font-sans sticky top-0 z-50 ${
@@ -479,7 +493,7 @@ const Navbar = () => {
               onClick={toggleMobileMenu}
               aria-label="Toggle menu"
             >
-              <HiOutlineMenuAlt4 className="text-xl" />
+              <IoMdMenu className="text-xl" />
             </button>
 
             {/* Logo */}
@@ -505,12 +519,10 @@ const Navbar = () => {
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
                 />
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                  <BsSearch />
-                </div>
+
                 <button
                   type="submit"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md bg-[#0D0B46] text-white shadow hover:bg-[#23206a] transition-all cursor-pointer"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-gray-600  transition-all cursor-pointer"
                 >
                   <BsSearch />
                 </button>
@@ -518,7 +530,7 @@ const Navbar = () => {
 
               {/* Enhanced Search Suggestions Dropdown */}
               {showSuggestions && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 max-h-[600px] overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 max-h-[600px] overflow-y-auto scrollbar-hide">
                   {/* Product Cards */}
                   {searchQuery.trim().length > 0 &&
                     searchProducts.length > 0 && (
@@ -779,7 +791,7 @@ const Navbar = () => {
             {(!isAuthenticated() || (user && !user.isVerifiedSeller)) && (
               <button
                 type="button"
-                className="hidden md:flex items-center bg-white text-[#0D0B46] hover:bg-gray-100 px-4 py-2 rounded-md font-semibold shadow-md hover:shadow-lg transition-all text-sm cursor-pointer"
+                className="hidden md:flex items-center text-white  px-4 py-2 rounded-md font-semibold shadow-md hover:shadow-lg transition-all text-sm cursor-pointer"
                 onClick={() => {
                   if (
                     isAuthenticated() &&
@@ -842,7 +854,7 @@ const Navbar = () => {
 
       {/* Mobile Search Bar (slides down when active) */}
       <div
-        className={`bg-[#0D0B46] transition-all duration-300 md:hidden overflow-hidden ${
+        className={`bg-[#0D0B46] transition-all duration-300 md:hidden overflow-visible ${
           isSearchActive
             ? "max-h-16 pb-3 px-4 opacity-100"
             : "max-h-0 opacity-0"
@@ -871,7 +883,10 @@ const Navbar = () => {
 
           {/* Mobile Search Suggestions */}
           {showSuggestions && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 max-h-[600px] overflow-y-auto">
+            <div
+              className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999] max-h-[600px] overflow-y-auto scrollbar-hide"
+              style={{ zIndex: 9999 }}
+            >
               {/* Product Cards */}
               {searchQuery.trim().length > 0 && searchProducts.length > 0 && (
                 <>
@@ -1218,11 +1233,11 @@ const Navbar = () => {
           {/* Right Side - Support */}
           <div className="flex items-center gap-4">
             <Link
-              to="/buyer/orders"
+              to="/customer-support"
               className="text-[#0D0B46] font-medium hover:text-[#23206a] transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <FaHeadset className="h-4 w-4" />
-              <span>Support</span>
+              <span>Customer Support</span>
             </Link>
           </div>
         </div>
@@ -1400,12 +1415,12 @@ const Navbar = () => {
               </Link>
 
               <Link
-                to="/contact"
+                to="/customer-support"
                 className="flex items-center gap-2 py-2.5 px-4 text-[#0D0B46] hover:bg-gray-50 rounded-lg font-medium cursor-pointer"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <FaHeadset className="h-4 w-4" />
-                <span>Support</span>
+                <span>Customer Support</span>
               </Link>
 
               <Link
@@ -1432,6 +1447,47 @@ const Navbar = () => {
                   </span>
                 )}
               </button>
+
+              {/* Switch to Seller (Mobile Only) */}
+              {user?.isVerifiedSeller && (
+                <>
+                  <button
+                    className="w-full bg-[#0D0B46] text-white hover:bg-[#23206a] py-2.5 px-4 rounded-lg font-medium shadow-md transition-all text-center cursor-pointer block mt-4 disabled:opacity-60 flex items-center justify-center gap-2"
+                    disabled={switching}
+                    onClick={async () => {
+                      setSwitching(true);
+                      setSwitchError("");
+                      try {
+                        // Make the PUT request
+                        await api.put(API.USER.UPDATE_ROLE, { role: "Seller" });
+                        await checkAuth();
+                        navigate("/seller/dashboard");
+                        setIsMobileMenuOpen(false);
+                      } catch (err) {
+                        if (err.response?.status === 403) {
+                          setSwitchError(
+                            "Authentication issue. Please refresh the page and try again."
+                          );
+                        } else {
+                          setSwitchError(handleApiError(err));
+                        }
+                      } finally {
+                        setSwitching(false);
+                      }
+                    }}
+                  >
+                    <FaUserPlus className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {switching ? "Switching..." : "Switch to Seller"}
+                    </span>
+                  </button>
+                  {switchError && (
+                    <p className="text-red-500 text-xs mt-2 text-center">
+                      {switchError}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Become a Seller (Mobile Menu) */}
@@ -1499,7 +1555,7 @@ const Navbar = () => {
       </div>
 
       {/* Animation Styles */}
-      <style>{`
+      {/* <style>{`
         .rotate-180 {
           transform: rotate(180deg);
         }
@@ -1513,9 +1569,31 @@ const Navbar = () => {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-      `}</style>
+      `}</style> */}
+      {/* <style>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style> */}
     </nav>
   );
 };
 
 export default Navbar;
+
+// Move style tags here for global effect and to avoid JSX errors
+const style = document.createElement("style");
+style.innerHTML = `
+  .rotate-180 { transform: rotate(180deg); }
+  .rotate-270 { transform: rotate(-90deg); }
+  .animate-fadeIn { animation: fadeIn 0.2s ease-in-out; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+`;
+if (
+  typeof document !== "undefined" &&
+  !document.getElementById("navbar-global-style")
+) {
+  style.id = "navbar-global-style";
+  document.head.appendChild(style);
+}

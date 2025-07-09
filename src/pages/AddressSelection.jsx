@@ -7,6 +7,7 @@ import LoadingState from "../components/LoadingState";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { FiPlus } from "react-icons/fi";
 import { india, states, cities } from "../utils/locationData";
+import { Country, State, City } from "country-state-city";
 
 const AddressSelection = () => {
   const navigate = useNavigate();
@@ -16,7 +17,12 @@ const AddressSelection = () => {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [formVisible, setFormVisible] = useState(false);
-  const [selectedState, setSelectedState] = useState(null);
+  // Replace static states/cities with dynamic ones from country-state-city
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [states, setStates] = useState(State.getStatesOfCountry("IN"));
+  const [cities, setCities] = useState([]);
+
   const [errors, setErrors] = useState({});
 
   const [newAddress, setNewAddress] = useState({
@@ -209,13 +215,18 @@ const AddressSelection = () => {
     setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
-  const handleStateChange = (state) => {
-    setSelectedState(state);
-    setNewAddress((prev) => ({ ...prev, state: state.name }));
+  const handleStateChange = (e) => {
+    const stateCode = e.target.value;
+    setSelectedState(stateCode);
+    setNewAddress((prev) => ({ ...prev, state: stateCode, city: "" }));
+    setCities(City.getCitiesOfState("IN", stateCode));
+    setSelectedCity("");
   };
 
   const handleCityChange = (e) => {
-    setNewAddress((prev) => ({ ...prev, city: e.target.value }));
+    const cityName = e.target.value;
+    setSelectedCity(cityName);
+    setNewAddress((prev) => ({ ...prev, city: cityName }));
   };
 
   const addNewAddressCancel = () => {
@@ -639,11 +650,8 @@ const AddressSelection = () => {
                     <select
                       name="state"
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent"
-                      onChange={(e) =>
-                        handleStateChange(
-                          states.find((s) => s.isoCode === e.target.value)
-                        )
-                      }
+                      value={selectedState}
+                      onChange={handleStateChange}
                     >
                       <option value="">Select State</option>
                       {states.map((state) => (
@@ -668,8 +676,9 @@ const AddressSelection = () => {
                     <select
                       name="city"
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent"
-                      disabled={!selectedState}
+                      value={selectedCity}
                       onChange={handleCityChange}
+                      disabled={!selectedState}
                     >
                       <option value="">Select City</option>
                       {cities.map((city) => (

@@ -93,6 +93,11 @@ export const API = {
     UPLOAD: `${API_BASE_URL}/image/upload`,
     UPLOAD_FILE: `${API_BASE_URL}/image/upload-file`,
   },
+  // Inquiry endpoints
+  INQUIRY: {
+    ALL: `${API_BASE_URL}/inquiries`,
+    CREATE: `${API_BASE_URL}/inquiries`,
+  },
 };
 
 export const API_CONFIG = {

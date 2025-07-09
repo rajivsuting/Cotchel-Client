@@ -15,7 +15,11 @@ const navItems = [
   { label: "Profile", icon: <FaUser />, path: "/buyer/profile" },
   { label: "Orders", icon: <FaShoppingBag />, path: "/buyer/orders" },
   { label: "Wishlist", icon: <FaHeart />, path: "/buyer/wishlist" },
-  { label: "Addresses", icon: <FaMapMarkerAlt />, path: "/buyer/addresses" },
+  {
+    label: "Addresses",
+    icon: <FaMapMarkerAlt />,
+    path: "/buyer/manage-address",
+  },
 ];
 
 const BuyerBottomNav = () => {
@@ -61,44 +65,7 @@ const BuyerBottomNav = () => {
             </Link>
           );
         })}
-        {/* Switch to Seller Button */}
-        {user?.isVerifiedSeller && (
-          <button
-            className="flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-200 text-gray-500 hover:text-[#0D0B46] hover:bg-gray-50"
-            disabled={switching}
-            onClick={async () => {
-              setSwitching(true);
-              setError("");
-              try {
-                // Make the PUT request - CSRF token will be handled by interceptor
-                const response = await api.put(API.USER.UPDATE_ROLE, {
-                  role: "Seller",
-                });
-                await checkAuth();
-                // Use navigate instead of window.location for better UX
-                window.location.href = "/seller/dashboard";
-              } catch (err) {
-                console.error("Role switch error:", err);
-                if (err.response?.status === 403) {
-                  setError(
-                    "Authentication issue. Please refresh the page and try again."
-                  );
-                } else {
-                  setError(handleApiError(err));
-                }
-              } finally {
-                setSwitching(false);
-              }
-            }}
-          >
-            <span className="text-lg mb-0.5">
-              <FaUserPlus />
-            </span>
-            <span className="text-[11px] font-medium">
-              {switching ? "Switching..." : "Sell"}
-            </span>
-          </button>
-        )}
+        {/* Switch to Seller Button removed from here */}
       </div>
     </nav>
   );

@@ -10,6 +10,7 @@ import {
 import { toast } from "react-hot-toast";
 import api from "../../services/apiService";
 import { API } from "../../config/api";
+import { Country, State, City } from "country-state-city";
 
 const ManageAddress = () => {
   const [addresses, setAddresses] = useState([]);
@@ -30,6 +31,12 @@ const ManageAddress = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [error, setError] = useState(null);
+
+  // Replace static state/city with dynamic ones from country-state-city
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [states, setStates] = useState(State.getStatesOfCountry("IN"));
+  const [cities, setCities] = useState([]);
 
   // Fetch addresses function
   const fetchAddresses = async () => {
@@ -146,6 +153,20 @@ const ManageAddress = () => {
       ...prev,
       [name]: error,
     }));
+  };
+
+  const handleStateChange = (e) => {
+    const stateCode = e.target.value;
+    setSelectedState(stateCode);
+    setFormData((prev) => ({ ...prev, state: stateCode, city: "" }));
+    setCities(City.getCitiesOfState("IN", stateCode));
+    setSelectedCity("");
+  };
+
+  const handleCityChange = (e) => {
+    const cityName = e.target.value;
+    setSelectedCity(cityName);
+    setFormData((prev) => ({ ...prev, city: cityName }));
   };
 
   const handleEdit = (address) => {
@@ -388,46 +409,55 @@ const ManageAddress = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
-                        errors.city && touched.city
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300"
-                      }`}
-                      placeholder="Enter city name"
-                    />
-                    {errors.city && touched.city && (
-                      <p className="mt-1 text-sm text-red-600">{errors.city}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       State <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="state"
-                      value={formData.state}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
                       className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
                         errors.state && touched.state
                           ? "border-red-500 focus:ring-red-500"
                           : "border-gray-300"
                       }`}
-                      placeholder="Enter state name"
-                    />
+                      value={selectedState}
+                      onChange={handleStateChange}
+                    >
+                      <option value="">Select State</option>
+                      {states.map((state) => (
+                        <option key={state.isoCode} value={state.isoCode}>
+                          {state.name}
+                        </option>
+                      ))}
+                    </select>
                     {errors.state && touched.state && (
                       <p className="mt-1 text-sm text-red-600">
                         {errors.state}
                       </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="city"
+                      className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
+                        errors.city && touched.city
+                          ? "border-red-500 focus:ring-red-500"
+                          : "border-gray-300"
+                      }`}
+                      value={selectedCity}
+                      onChange={handleCityChange}
+                      disabled={!selectedState}
+                    >
+                      <option value="">Select City</option>
+                      {cities.map((city) => (
+                        <option key={city.name} value={city.name}>
+                          {city.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.city && touched.city && (
+                      <p className="mt-1 text-sm text-red-600">{errors.city}</p>
                     )}
                   </div>
                   <div>
@@ -683,47 +713,56 @@ const ManageAddress = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        City <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
-                          errors.city && touched.city
-                            ? "border-red-500 focus:ring-red-500"
-                            : "border-gray-300"
-                        }`}
-                        placeholder="Enter city name"
-                      />
-                      {errors.city && touched.city && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.city}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         State <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
+                      <select
                         name="state"
-                        value={formData.state}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
                         className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
                           errors.state && touched.state
                             ? "border-red-500 focus:ring-red-500"
                             : "border-gray-300"
                         }`}
-                        placeholder="Enter state name"
-                      />
+                        value={selectedState}
+                        onChange={handleStateChange}
+                      >
+                        <option value="">Select State</option>
+                        {states.map((state) => (
+                          <option key={state.isoCode} value={state.isoCode}>
+                            {state.name}
+                          </option>
+                        ))}
+                      </select>
                       {errors.state && touched.state && (
                         <p className="mt-1 text-sm text-red-600">
                           {errors.state}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        City <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="city"
+                        className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
+                          errors.city && touched.city
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300"
+                        }`}
+                        value={selectedCity}
+                        onChange={handleCityChange}
+                        disabled={!selectedState}
+                      >
+                        <option value="">Select City</option>
+                        {cities.map((city) => (
+                          <option key={city.name} value={city.name}>
+                            {city.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.city && touched.city && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.city}
                         </p>
                       )}
                     </div>
