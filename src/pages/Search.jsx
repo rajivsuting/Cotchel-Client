@@ -343,6 +343,9 @@ const Search = () => {
     };
   }, [isDragging, priceRange]);
 
+  // Hide sort bar
+  const showSortBar = false;
+
   if (!query) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -694,33 +697,35 @@ const Search = () => {
 
       <div className="max-w-[95%] sm:max-w-[90%] md:max-w-[85%] lg:max-w-6xl 2xl:max-w-7xl mx-auto px-2 sm:px-4 py-6">
         {/* Sort Controls */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
-          <div className="flex items-center gap-2 mb-2 md:mb-0">
-            <FaSort className="text-[#0D0B46]" />
-            <span className="text-gray-700 font-medium">Sort by:</span>
+        {showSortBar && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+            <div className="flex items-center gap-2 mb-2 md:mb-0">
+              <FaSort className="text-[#0D0B46]" />
+              <span className="text-gray-700 font-medium">Sort by:</span>
+            </div>
+            {/* Mobile: horizontal scrollable sort bar */}
+            <div className="flex gap-2 overflow-x-auto md:overflow-visible scrollbar-hide">
+              {[
+                { value: "newest", label: "Newest" },
+                { value: "price_low", label: "Price: Low to High" },
+                { value: "price_high", label: "Price: High to Low" },
+                { value: "rating", label: "Rating" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleFilterChange("sort", option.value)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium whitespace-nowrap transition-colors border border-transparent ${
+                    sortBy === option.value
+                      ? "bg-[#0D0B46] text-white border-[#0D0B46] shadow"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-          {/* Mobile: horizontal scrollable sort bar */}
-          <div className="flex gap-2 overflow-x-auto md:overflow-visible scrollbar-hide">
-            {[
-              { value: "newest", label: "Newest" },
-              { value: "price_low", label: "Price: Low to High" },
-              { value: "price_high", label: "Price: High to Low" },
-              { value: "rating", label: "Rating" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleFilterChange("sort", option.value)}
-                className={`px-3 py-1 rounded-md text-sm font-medium whitespace-nowrap transition-colors border border-transparent ${
-                  sortBy === option.value
-                    ? "bg-[#0D0B46] text-white border-[#0D0B46] shadow"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         <div className="flex gap-6">
           {/* Filters Sidebar (Desktop) */}
@@ -742,14 +747,21 @@ const Search = () => {
             {/* Mobile Filter Modal */}
             {isMobileFilterOpen && (
               <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black bg-opacity-40 lg:hidden">
-                <div className="w-full max-w-md bg-white rounded-t-2xl shadow-lg p-6 animate-slideUp relative">
-                  <button
-                    className="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl"
-                    onClick={() => setIsMobileFilterOpen(false)}
-                  >
-                    <FaTimes />
-                  </button>
-                  <div className="overflow-y-auto max-h-[70vh] pb-4">
+                <div className="w-full max-w-md bg-white rounded-t-2xl shadow-lg p-0 animate-slideUp relative">
+                  {/* Sticky header with close button */}
+                  <div className="sticky top-0 z-10 bg-white px-6 pt-6 pb-2 flex justify-between items-center border-b border-gray-200 rounded-t-2xl">
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      Filters
+                    </h2>
+                    <button
+                      className="text-gray-400 hover:text-gray-700 text-2xl"
+                      onClick={() => setIsMobileFilterOpen(false)}
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                  {/* Scrollable filter content */}
+                  <div className="overflow-y-auto max-h-[70vh] px-6 pb-4">
                     {FilterControls}
                   </div>
                   <button

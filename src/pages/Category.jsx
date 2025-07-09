@@ -400,6 +400,331 @@ const Category = () => {
     };
   }, [isDragging, priceRange]);
 
+  // Hide sort bar
+  const showSortBar = false;
+
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // FilterControls (reuse for sidebar and modal)
+  const FilterControls = (
+    <>
+      {/* Selected Filters */}
+      {(activeFilters.price ||
+        activeFilters.brands.length > 0 ||
+        activeFilters.ratings ||
+        activeFilters.lotSize) && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">
+            Selected Filters
+          </h3>
+          <div className="space-y-2">
+            {activeFilters.price && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
+                <span className="text-sm text-gray-600">
+                  Price: {activeFilters.price}
+                </span>
+                <button
+                  onClick={() => removeFilter("price")}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {activeFilters.brands.map((brand) => (
+              <div
+                key={brand}
+                className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5"
+              >
+                <span className="text-sm text-gray-600">Brand: {brand}</span>
+                <button
+                  onClick={() => removeFilter("brands", brand)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            {activeFilters.ratings && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
+                <span className="text-sm text-gray-600">
+                  Rating: {activeFilters.ratings}★ & Up
+                </span>
+                <button
+                  onClick={() => removeFilter("ratings")}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {activeFilters.lotSize && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
+                <span className="text-sm text-gray-600">
+                  Lot Size: {activeFilters.lotSize}
+                </span>
+                <button
+                  onClick={() => removeFilter("lotSize")}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              setPriceRange({ min: 0, max: 50000 });
+              setSelectedBrands([]);
+              setSelectedRating(null);
+              setSelectedLotSize(null);
+              handleFilterChange("price", { min: 0, max: 50000 });
+              handleFilterChange("brands", []);
+              handleFilterChange("rating", null);
+              handleFilterChange("lotSize", null);
+            }}
+            className="mt-3 text-sm text-[#0D0B46] hover:text-[#23206a] font-medium"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      )}
+      {/* Price Range Filter */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <FaFilter className="text-[#0D0B46]" />
+            Filters
+          </h2>
+        </div>
+        <div className="border-b border-gray-200">
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("price")}
+          >
+            <span>Price Range</span>
+            {expandedFilters.price ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.price && (
+            <div className="px-4 pb-4">
+              <div className="space-y-6">
+                {/* Price Range Slider */}
+                <div className="relative pt-6">
+                  <div
+                    ref={priceSliderRef}
+                    className="relative h-1 bg-gray-200 rounded-full cursor-pointer"
+                  >
+                    {/* Track */}
+                    <div
+                      className="absolute h-full bg-[#0D0B46] rounded-full"
+                      style={{
+                        left: `${(priceRange.min / 50000) * 100}%`,
+                        right: `${100 - (priceRange.max / 50000) * 100}%`,
+                      }}
+                    />
+                    {/* Min Thumb */}
+                    <div
+                      className="absolute w-4 h-4 bg-white border-2 border-[#0D0B46] rounded-full -top-1.5 cursor-pointer hover:scale-110 transition-transform"
+                      style={{
+                        left: `${(priceRange.min / 50000) * 100}%`,
+                      }}
+                      onMouseDown={(e) => handlePriceSliderMouseDown(e, "min")}
+                    />
+                    {/* Max Thumb */}
+                    <div
+                      className="absolute w-4 h-4 bg-white border-2 border-[#0D0B46] rounded-full -top-1.5 cursor-pointer hover:scale-110 transition-transform"
+                      style={{
+                        left: `${(priceRange.max / 50000) * 100}%`,
+                      }}
+                      onMouseDown={(e) => handlePriceSliderMouseDown(e, "max")}
+                    />
+                  </div>
+                  {/* Price Points */}
+                  <div className="absolute -bottom-6 left-0 right-0 flex justify-between">
+                    <div className="text-xs text-gray-500">
+                      ₹{priceRange.min.toLocaleString("en-IN")}
+                    </div>
+                    <div className="flex-1 flex justify-center items-center">
+                      <div className="flex justify-between w-full px-4">
+                        {[...Array(5)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-1.5 h-1.5 rounded-full bg-gray-300"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      ₹{priceRange.max.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                </div>
+                {/* Price Inputs */}
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <label className="block text-sm text-gray-600 mb-1">
+                      Min Price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        value={priceRange.min}
+                        onChange={(e) => {
+                          const value = Math.min(
+                            Number(e.target.value),
+                            priceRange.max - 500
+                          );
+                          setPriceRange((prev) => ({
+                            ...prev,
+                            min: value,
+                          }));
+                          handleFilterChange("price", {
+                            ...priceRange,
+                            min: value,
+                          });
+                        }}
+                        className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
+                        min="0"
+                        max={priceRange.max - 500}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm text-gray-600 mb-1">
+                      Max Price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        value={priceRange.max}
+                        onChange={(e) => {
+                          const value = Math.max(
+                            Number(e.target.value),
+                            priceRange.min + 500
+                          );
+                          setPriceRange((prev) => ({
+                            ...prev,
+                            max: value,
+                          }));
+                          handleFilterChange("price", {
+                            ...priceRange,
+                            max: value,
+                          });
+                        }}
+                        className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
+                        min={priceRange.min + 500}
+                        max="50000"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Brands Filter */}
+        <div className="border-b border-gray-200">
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("brands")}
+          >
+            <span>Brands</span>
+            {expandedFilters.brands ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.brands && (
+            <div className="px-4 pb-4 space-y-2">
+              {["Apple", "Samsung", "Sony", "LG", "Bose"].map((brand) => (
+                <label key={brand} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={(e) => {
+                      const newBrands = e.target.checked
+                        ? [...selectedBrands, brand]
+                        : selectedBrands.filter((b) => b !== brand);
+                      handleFilterChange("brands", newBrands);
+                    }}
+                    className="rounded text-[#0D0B46] focus:ring-[#0D0B46]"
+                  />
+                  <span className="text-sm">{brand}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* Lot Size Filter */}
+        <div className="border-b border-gray-200">
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("lotSize")}
+          >
+            <span>Lot Size</span>
+            {expandedFilters.lotSize ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.lotSize && (
+            <div className="px-4 pb-4 space-y-2">
+              {[
+                { value: "1", label: "Single Item" },
+                { value: "2-5", label: "2-5 Items" },
+                { value: "6-10", label: "6-10 Items" },
+                { value: "10+", label: "10+ Items" },
+              ].map((option) => (
+                <label key={option.value} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="lotSize"
+                    checked={selectedLotSize === option.value}
+                    onChange={(e) =>
+                      handleFilterChange("lotSize", e.target.value)
+                    }
+                    value={option.value}
+                    className="text-[#0D0B46] focus:ring-[#0D0B46]"
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* Ratings Filter */}
+        <div>
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("ratings")}
+          >
+            <span>Ratings</span>
+            {expandedFilters.ratings ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.ratings && (
+            <div className="px-4 pb-4 space-y-2">
+              {[4, 3, 2, 1].map((rating) => (
+                <label key={rating} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="rating"
+                    checked={selectedRating === rating.toString()}
+                    onChange={(e) =>
+                      handleFilterChange("rating", e.target.value)
+                    }
+                    value={rating}
+                    className="text-[#0D0B46] focus:ring-[#0D0B46]"
+                  />
+                  <span className="text-sm">{rating}★ & Up</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
   if (categoriesLoading) {
     return <LoadingSpinner />;
   }
@@ -434,399 +759,48 @@ const Category = () => {
 
       <div className="max-w-[95%] sm:max-w-[90%] md:max-w-[85%] lg:max-w-6xl 2xl:max-w-7xl mx-auto px-2 sm:px-4 py-6">
         {/* Sort Controls */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FaSort className="text-[#0D0B46]" />
-            <span className="text-gray-700 font-medium">Sort by:</span>
+        {showSortBar && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FaSort className="text-[#0D0B46]" />
+              <span className="text-gray-700 font-medium">Sort by:</span>
+            </div>
+            <div className="flex gap-4">
+              {[
+                { value: "newest", label: "Newest" },
+                { value: "price_low", label: "Price: Low to High" },
+                { value: "price_high", label: "Price: High to Low" },
+                { value: "rating", label: "Rating" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleFilterChange("sort", option.value)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    sortBy === option.value
+                      ? "bg-[#0D0B46] text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-4">
-            {[
-              { value: "newest", label: "Newest" },
-              { value: "price_low", label: "Price: Low to High" },
-              { value: "price_high", label: "Price: High to Low" },
-              { value: "rating", label: "Rating" },
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleFilterChange("sort", option.value)}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  sortBy === option.value
-                    ? "bg-[#0D0B46] text-white"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         <div className="flex gap-6">
           {/* Filters Sidebar */}
           <div className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-24 space-y-4">
-              {/* Selected Filters */}
-              {(activeFilters.price ||
-                activeFilters.brands.length > 0 ||
-                activeFilters.ratings ||
-                activeFilters.lotSize) && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">
-                    Selected Filters
-                  </h3>
-                  <div className="space-y-2">
-                    {activeFilters.price && (
-                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
-                        <span className="text-sm text-gray-600">
-                          Price: {activeFilters.price}
-                        </span>
-                        <button
-                          onClick={() => removeFilter("price")}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <FaTimes className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {activeFilters.brands.map((brand) => (
-                      <div
-                        key={brand}
-                        className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5"
-                      >
-                        <span className="text-sm text-gray-600">
-                          Brand: {brand}
-                        </span>
-                        <button
-                          onClick={() => removeFilter("brands", brand)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <FaTimes className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                    {activeFilters.ratings && (
-                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
-                        <span className="text-sm text-gray-600">
-                          Rating: {activeFilters.ratings}★ & Up
-                        </span>
-                        <button
-                          onClick={() => removeFilter("ratings")}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <FaTimes className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {activeFilters.lotSize && (
-                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
-                        <span className="text-sm text-gray-600">
-                          Lot Size: {activeFilters.lotSize}
-                        </span>
-                        <button
-                          onClick={() => removeFilter("lotSize")}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <FaTimes className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      setPriceRange({ min: 0, max: 50000 });
-                      setSelectedBrands([]);
-                      setSelectedRating(null);
-                      setSelectedLotSize(null);
-                      handleFilterChange("price", { min: 0, max: 50000 });
-                      handleFilterChange("brands", []);
-                      handleFilterChange("rating", null);
-                      handleFilterChange("lotSize", null);
-                    }}
-                    className="mt-3 text-sm text-[#0D0B46] hover:text-[#23206a] font-medium"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              )}
-
-              {/* Price Range Filter */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <FaFilter className="text-[#0D0B46]" />
-                    Filters
-                  </h2>
-                </div>
-
-                <div className="border-b border-gray-200">
-                  <button
-                    className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
-                    onClick={() => toggleFilter("price")}
-                  >
-                    <span>Price Range</span>
-                    {expandedFilters.price ? (
-                      <FaChevronUp />
-                    ) : (
-                      <FaChevronDown />
-                    )}
-                  </button>
-                  {expandedFilters.price && (
-                    <div className="px-4 pb-4">
-                      <div className="space-y-6">
-                        {/* Price Range Slider */}
-                        <div className="relative pt-6">
-                          <div
-                            ref={priceSliderRef}
-                            className="relative h-1 bg-gray-200 rounded-full cursor-pointer"
-                          >
-                            {/* Track */}
-                            <div
-                              className="absolute h-full bg-[#0D0B46] rounded-full"
-                              style={{
-                                left: `${(priceRange.min / 50000) * 100}%`,
-                                right: `${
-                                  100 - (priceRange.max / 50000) * 100
-                                }%`,
-                              }}
-                            />
-
-                            {/* Min Thumb */}
-                            <div
-                              className="absolute w-4 h-4 bg-white border-2 border-[#0D0B46] rounded-full -top-1.5 cursor-pointer hover:scale-110 transition-transform"
-                              style={{
-                                left: `${(priceRange.min / 50000) * 100}%`,
-                              }}
-                              onMouseDown={(e) =>
-                                handlePriceSliderMouseDown(e, "min")
-                              }
-                            />
-
-                            {/* Max Thumb */}
-                            <div
-                              className="absolute w-4 h-4 bg-white border-2 border-[#0D0B46] rounded-full -top-1.5 cursor-pointer hover:scale-110 transition-transform"
-                              style={{
-                                left: `${(priceRange.max / 50000) * 100}%`,
-                              }}
-                              onMouseDown={(e) =>
-                                handlePriceSliderMouseDown(e, "max")
-                              }
-                            />
-                          </div>
-
-                          {/* Price Points */}
-                          <div className="absolute -bottom-6 left-0 right-0 flex justify-between">
-                            <div className="text-xs text-gray-500">
-                              ₹{priceRange.min.toLocaleString("en-IN")}
-                            </div>
-                            <div className="flex-1 flex justify-center items-center">
-                              <div className="flex justify-between w-full px-4">
-                                {[...Array(5)].map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className="w-1.5 h-1.5 rounded-full bg-gray-300"
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              ₹{priceRange.max.toLocaleString("en-IN")}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Price Inputs */}
-                        <div className="flex gap-4 items-center">
-                          <div className="flex-1">
-                            <label className="block text-sm text-gray-600 mb-1">
-                              Min Price
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                ₹
-                              </span>
-                              <input
-                                type="number"
-                                value={priceRange.min}
-                                onChange={(e) => {
-                                  const value = Math.min(
-                                    Number(e.target.value),
-                                    priceRange.max - 500
-                                  );
-                                  setPriceRange((prev) => ({
-                                    ...prev,
-                                    min: value,
-                                  }));
-                                  handleFilterChange("price", {
-                                    ...priceRange,
-                                    min: value,
-                                  });
-                                }}
-                                className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
-                                min="0"
-                                max={priceRange.max - 500}
-                              />
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <label className="block text-sm text-gray-600 mb-1">
-                              Max Price
-                            </label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                ₹
-                              </span>
-                              <input
-                                type="number"
-                                value={priceRange.max}
-                                onChange={(e) => {
-                                  const value = Math.max(
-                                    Number(e.target.value),
-                                    priceRange.min + 500
-                                  );
-                                  setPriceRange((prev) => ({
-                                    ...prev,
-                                    max: value,
-                                  }));
-                                  handleFilterChange("price", {
-                                    ...priceRange,
-                                    max: value,
-                                  });
-                                }}
-                                className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
-                                min={priceRange.min + 500}
-                                max="50000"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Brands Filter */}
-                <div className="border-b border-gray-200">
-                  <button
-                    className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
-                    onClick={() => toggleFilter("brands")}
-                  >
-                    <span>Brands</span>
-                    {expandedFilters.brands ? (
-                      <FaChevronUp />
-                    ) : (
-                      <FaChevronDown />
-                    )}
-                  </button>
-                  {expandedFilters.brands && (
-                    <div className="px-4 pb-4 space-y-2">
-                      {["Apple", "Samsung", "Sony", "LG", "Bose"].map(
-                        (brand) => (
-                          <label
-                            key={brand}
-                            className="flex items-center gap-2"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedBrands.includes(brand)}
-                              onChange={(e) => {
-                                const newBrands = e.target.checked
-                                  ? [...selectedBrands, brand]
-                                  : selectedBrands.filter((b) => b !== brand);
-                                handleFilterChange("brands", newBrands);
-                              }}
-                              className="rounded text-[#0D0B46] focus:ring-[#0D0B46]"
-                            />
-                            <span className="text-sm">{brand}</span>
-                          </label>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Lot Size Filter */}
-                <div className="border-b border-gray-200">
-                  <button
-                    className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
-                    onClick={() => toggleFilter("lotSize")}
-                  >
-                    <span>Lot Size</span>
-                    {expandedFilters.lotSize ? (
-                      <FaChevronUp />
-                    ) : (
-                      <FaChevronDown />
-                    )}
-                  </button>
-                  {expandedFilters.lotSize && (
-                    <div className="px-4 pb-4 space-y-2">
-                      {[
-                        { value: "1", label: "Single Item" },
-                        { value: "2-5", label: "2-5 Items" },
-                        { value: "6-10", label: "6-10 Items" },
-                        { value: "10+", label: "10+ Items" },
-                      ].map((option) => (
-                        <label
-                          key={option.value}
-                          className="flex items-center gap-2"
-                        >
-                          <input
-                            type="radio"
-                            name="lotSize"
-                            checked={selectedLotSize === option.value}
-                            onChange={(e) =>
-                              handleFilterChange("lotSize", e.target.value)
-                            }
-                            value={option.value}
-                            className="text-[#0D0B46] focus:ring-[#0D0B46]"
-                          />
-                          <span className="text-sm">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Ratings Filter */}
-                <div>
-                  <button
-                    className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
-                    onClick={() => toggleFilter("ratings")}
-                  >
-                    <span>Ratings</span>
-                    {expandedFilters.ratings ? (
-                      <FaChevronUp />
-                    ) : (
-                      <FaChevronDown />
-                    )}
-                  </button>
-                  {expandedFilters.ratings && (
-                    <div className="px-4 pb-4 space-y-2">
-                      {[4, 3, 2, 1].map((rating) => (
-                        <label key={rating} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="rating"
-                            checked={selectedRating === rating.toString()}
-                            onChange={(e) =>
-                              handleFilterChange("rating", e.target.value)
-                            }
-                            value={rating}
-                            className="text-[#0D0B46] focus:ring-[#0D0B46]"
-                          />
-                          <span className="text-sm">{rating}★ & Up</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <div className="sticky top-24 space-y-4">{FilterControls}</div>
           </div>
 
           {/* Products Grid */}
           <div className="flex-1">
             {/* Mobile Filter Button */}
-            <button className="md:hidden w-full mb-4 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg p-3 text-gray-700 font-medium hover:bg-gray-50">
+            <button
+              className="md:hidden w-full mb-4 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg p-3 text-gray-700 font-medium hover:bg-gray-50"
+              onClick={() => setIsMobileFilterOpen(true)}
+            >
               <FaFilter className="text-[#0D0B46]" />
               Filters
             </button>
@@ -893,6 +867,34 @@ const Category = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Filter Modal */}
+      {isMobileFilterOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black bg-opacity-40 lg:hidden">
+          <div className="w-full max-w-md bg-white rounded-t-2xl shadow-lg p-0 animate-slideUp relative">
+            {/* Sticky header with close button */}
+            <div className="sticky top-0 z-10 bg-white px-6 pt-6 pb-2 flex justify-between items-center border-b border-gray-200 rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
+              <button
+                className="text-gray-400 hover:text-gray-700 text-2xl"
+                onClick={() => setIsMobileFilterOpen(false)}
+              >
+                <FaTimes />
+              </button>
+            </div>
+            {/* Scrollable filter content */}
+            <div className="overflow-y-auto max-h-[70vh] px-6 pb-4">
+              {FilterControls}
+            </div>
+            <button
+              className="w-full mt-4 py-3 bg-[#0D0B46] text-white rounded-lg font-semibold text-lg hover:bg-[#23206a] transition"
+              onClick={() => setIsMobileFilterOpen(false)}
+            >
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
