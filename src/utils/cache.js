@@ -5,6 +5,19 @@ const RETRY_DELAY = 1000; // 1 second
 
 const cache = new Map();
 
+// Utility function to get CSRF token from cookies or localStorage
+function getCSRFToken() {
+  if (typeof document === "undefined") return null;
+  let token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("XSRF-TOKEN="))
+    ?.split("=")[1];
+  if (!token) {
+    token = localStorage.getItem("XSRF-TOKEN");
+  }
+  return token;
+}
+
 export const getCachedData = (key) => {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY) {
@@ -37,9 +50,14 @@ export const fetchWithCache = async (url, options = {}, retryCount = 0) => {
   }
 
   try {
+    const token = getCSRFToken();
     const response = await fetch(url, {
       ...options,
       credentials: "include",
+      headers: {
+        ...(options.headers || {}),
+        ...(token && { "X-CSRF-Token": token }),
+      },
     });
 
     if (!response.ok) {

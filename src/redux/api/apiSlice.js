@@ -1,13 +1,17 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { axiosBaseQuery } from "./axiosBaseQuery";
 
-// Utility function to get CSRF token from cookies
+// Utility function to get CSRF token from cookies or localStorage
 function getCSRFToken() {
   if (typeof document === "undefined") return null;
-  return document.cookie
+  let token = document.cookie
     .split("; ")
     .find((row) => row.startsWith("XSRF-TOKEN="))
     ?.split("=")[1];
+  if (!token) {
+    token = localStorage.getItem("XSRF-TOKEN");
+  }
+  return token;
 }
 
 // Generate unique request ID

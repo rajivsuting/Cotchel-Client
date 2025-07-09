@@ -3,6 +3,19 @@ import { useSearchParams } from "react-router-dom";
 import { FaStar, FaRegStar } from "react-icons/fa";
 import { API } from "../config/api";
 
+// Utility function to get CSRF token from cookies or localStorage
+function getCSRFToken() {
+  if (typeof document === "undefined") return null;
+  let token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("XSRF-TOKEN="))
+    ?.split("=")[1];
+  if (!token) {
+    token = localStorage.getItem("XSRF-TOKEN");
+  }
+  return token;
+}
+
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,11 +46,13 @@ const Products = () => {
         setLoading(true);
         setError(null);
         const queryParams = new URLSearchParams(filters).toString();
+        const token = getCSRFToken();
         const response = await fetch(`${API.PRODUCTS.ALL}?${queryParams}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
+            ...(token && { "X-CSRF-Token": token }),
           },
           credentials: "include", // Include cookies if needed
         });

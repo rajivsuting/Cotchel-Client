@@ -8,6 +8,19 @@ import {
   handleApiError,
 } from "../services/apiService";
 
+// Utility function to get CSRF token from cookies or localStorage
+function getCSRFToken() {
+  if (typeof document === "undefined") return null;
+  let token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("XSRF-TOKEN="))
+    ?.split("=")[1];
+  if (!token) {
+    token = localStorage.getItem("XSRF-TOKEN");
+  }
+  return token;
+}
+
 // Custom hook for API calls with CSRF token handling
 export function useApi() {
   const [csrfToken, setCsrfToken] = useState(null);
@@ -16,11 +29,7 @@ export function useApi() {
 
   useEffect(() => {
     // Get CSRF token on component mount
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("XSRF-TOKEN="))
-      ?.split("=")[1];
-    setCsrfToken(token);
+    setCsrfToken(getCSRFToken());
   }, []);
 
   const apiCall = async (url, options = {}) => {
@@ -28,11 +37,12 @@ export function useApi() {
     setError(null);
 
     try {
+      const token = getCSRFToken();
       const response = await fetch(url, {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+          ...(token && { "X-CSRF-Token": token }),
           ...options.headers,
         },
         ...options,

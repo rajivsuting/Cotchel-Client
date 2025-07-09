@@ -1,18 +1,20 @@
 // CSRF Token Management Utilities
 
 /**
- * Get CSRF token from cookies
+ * Get CSRF token from cookies or localStorage
  * @returns {string|null} CSRF token or null if not found
  */
 export function getCSRFToken() {
   if (typeof document === "undefined") return null;
-
-  return (
+  let token =
     document.cookie
       .split("; ")
       .find((row) => row.startsWith("XSRF-TOKEN="))
-      ?.split("=")[1] || null
-  );
+      ?.split("=")[1] || null;
+  if (!token) {
+    token = localStorage.getItem("XSRF-TOKEN");
+  }
+  return token;
 }
 
 /**
