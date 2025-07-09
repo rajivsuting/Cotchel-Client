@@ -10,6 +10,22 @@ const api = axios.create({
   xsrfHeaderName: "X-CSRF-Token", // Changed to match backend expectation
 });
 
+// Custom CSRF token getter that checks both cookies and localStorage
+const getCSRFToken = () => {
+  // Try cookies first
+  let token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("XSRF-TOKEN="))
+    ?.split("=")[1];
+
+  // If not in cookies, try localStorage
+  if (!token) {
+    token = localStorage.getItem("XSRF-TOKEN");
+  }
+
+  return token;
+};
+
 // Utility: Generate unique request ID
 function generateRequestId() {
   return (
@@ -28,11 +44,20 @@ export const initializeCSRFToken = async () => {
     // Give the browser a moment to commit the Set-Cookie header
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Check if CSRF token is now available
-    const token = document.cookie
+    // Check if CSRF token is now available in cookies
+    let token = document.cookie
       .split("; ")
       .find((row) => row.startsWith("XSRF-TOKEN="))
       ?.split("=")[1];
+
+    // If not in cookies, try to get from response body
+    if (!token && response.data?.csrfToken) {
+      token = response.data.csrfToken;
+      console.log("[CSRF] Using token from response body");
+
+      // Store in localStorage as fallback
+      localStorage.setItem("XSRF-TOKEN", token);
+    }
 
     console.log(
       "[CSRF] Token after initialization:",
@@ -54,20 +79,27 @@ api.interceptors.request.use(
     if (import.meta.env.DEV || config.baseURL?.includes("localhost")) {
       config.headers["X-Request-ID"] = generateRequestId();
     }
-    
+
     // Debug CSRF token for state-changing requests
-    if (["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())) {
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("XSRF-TOKEN="))
-        ?.split("=")[1];
-      
-      console.log(`[CSRF] ${config.method} ${config.url} - Token:`, token ? "Present" : "Missing");
+    if (
+      ["POST", "PUT", "PATCH", "DELETE"].includes(config.method?.toUpperCase())
+    ) {
+      const token = getCSRFToken();
+
+      // Manually set CSRF header if token is available
+      if (token) {
+        config.headers["X-CSRF-Token"] = token;
+      }
+
+      console.log(
+        `[CSRF] ${config.method} ${config.url} - Token:`,
+        token ? "Present" : "Missing"
+      );
       if (!token) {
         console.warn(`[CSRF] Missing token for ${config.method} ${config.url}`);
       }
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -83,11 +115,14 @@ api.interceptors.response.use(
     const { response } = error;
 
     // Handle CSRF errors
-    if (response?.status === 403 && response?.data?.error === "Invalid or missing CSRF token") {
+    if (
+      response?.status === 403 &&
+      response?.data?.error === "Invalid or missing CSRF token"
+    ) {
       console.error("[CSRF] Token validation failed for:", error.config?.url);
       console.error("[CSRF] Request headers:", error.config?.headers);
       console.error("[CSRF] Available cookies:", document.cookie);
-      
+
       // Try to reinitialize CSRF token
       try {
         console.log("[CSRF] Attempting to reinitialize token...");
