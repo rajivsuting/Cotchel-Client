@@ -181,7 +181,54 @@ const SellerStock = () => {
   };
 
   const handleEditProduct = (productId) => {
-    navigate(`/edit/product/${productId}`);
+    navigate(`/seller/dashboard/products/${productId}/edit`);
+  };
+
+  const handleExport = async () => {
+    try {
+      const res = await api.get(API.PRODUCTS.ALL);
+      const products = res.data.products || res.data.data || [];
+      if (!products.length) return alert("No products to export");
+      const csvHeaders = [
+        "Title,Brand,Model,Category,SubCategory,Price,CompareAtPrice,Quantity,LotSize,Length,Breadth,Height,Weight,Description,FeaturedImage,Images,FileAttachments,KeyHighlights",
+      ];
+      const csvRows = products.map((p) =>
+        [
+          p.title,
+          p.brand,
+          p.model,
+          p.category?.name || p.category,
+          p.subCategory?.name || p.subCategory,
+          p.price,
+          p.compareAtPrice,
+          p.quantityAvailable,
+          p.lotSize,
+          p.length,
+          p.breadth,
+          p.height,
+          p.weight,
+          JSON.stringify(p.description),
+          p.featuredImage,
+          (p.images || []).join(";"),
+          (p.fileAttachments || []).join(";"),
+          (p.keyHighLights || []).join(";"),
+        ]
+          .map((v) => `"${(v ?? "").toString().replace(/"/g, '""')}"`)
+          .join(",")
+      );
+      const csv = csvHeaders.concat(csvRows).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "products.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Failed to export products");
+    }
   };
 
   const filteredProducts = products.filter((product) =>
@@ -203,12 +250,13 @@ const SellerStock = () => {
             <button
               className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 flex items-center transition-colors cursor-pointer"
               aria-label="Export products"
+              onClick={handleExport}
             >
               <Download size={16} className="mr-2" />
               Export
             </button>
             <button
-              onClick={() => navigate("/add-products?user=seller")}
+              onClick={() => navigate("/seller/dashboard/products/add")}
               className="flex items-center px-4 py-2 bg-[#0c0b45] text-white rounded-lg hover:bg-[#14136a] transition-colors cursor-pointer"
               aria-label="Add new product"
             >

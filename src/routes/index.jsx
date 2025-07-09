@@ -42,6 +42,7 @@ const OrderConfirmation = lazy(() => import("../pages/OrderConfirmation"));
 const Contact = lazy(() => import("../pages/Contact"));
 const Search = lazy(() => import("../pages/Search"));
 const SellerProductDetail = lazy(() => import("../pages/seller/ProductDetail"));
+const SellerEditProduct = lazy(() => import("../pages/seller/EditProduct"));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -346,6 +347,14 @@ export const routes = [
         element: (
           <LazyRoute>
             <SellerProductDetail />
+          </LazyRoute>
+        ),
+      },
+      {
+        path: "products/:id/edit",
+        element: (
+          <LazyRoute>
+            <SellerEditProduct />
           </LazyRoute>
         ),
       },
