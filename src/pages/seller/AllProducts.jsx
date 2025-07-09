@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../../services/apiService";
 import Swal from "sweetalert2";
 import { API, API_CONFIG } from "../../config/api";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 import {
   Search,
@@ -57,7 +58,12 @@ const ProductRow = ({ product, onDelete, onEdit }) => {
           />
           <div>
             <div className="text-sm font-medium text-gray-900">
-              {product.title}
+              <Link
+                to={`/seller/dashboard/products/${product._id}`}
+                className="hover:underline"
+              >
+                {product.title}
+              </Link>
             </div>
             <div className="text-xs text-gray-500">
               SKU: {product.sku || "N/A"}
@@ -182,7 +188,7 @@ const SellerStock = () => {
     product.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <LoadingSpinner />;
   if (error) return <div>{error}</div>;
 
   return (

@@ -293,18 +293,18 @@ const SellerSidebar = ({ isCollapsed, toggleCollapse }) => {
 
       {/* Fixed Bottom Section */}
       <div className="flex-none">
-        {/* Settings */}
+        {/* Account */}
         <div className="px-2">
           <Link
             to="/seller/dashboard/settings"
             className={`flex items-center gap-2 px-3 h-10 hover:bg-[#1d1c5e] rounded-md ${
-              isActive("/seller/dashboard/settings")
+              isActive("/seller/dashboard/account")
                 ? "bg-[#1d1c5e] text-white"
                 : "text-gray-300 hover:text-white"
             }`}
           >
             <AiOutlineSetting className="text-xl" />
-            {!isCollapsed && "Settings"}
+            {!isCollapsed && "Account"}
           </Link>
         </div>
 

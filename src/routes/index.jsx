@@ -31,7 +31,7 @@ const SellerOverview = lazy(() => import("../pages/seller/Overview"));
 const SellerProducts = lazy(() => import("../pages/seller/Products"));
 const SellerOrders = lazy(() => import("../pages/seller/Orders"));
 const SellerEarnings = lazy(() => import("../pages/seller/Earnings"));
-const SellerSettings = lazy(() => import("../pages/seller/Settings"));
+const SellerAccount = lazy(() => import("../pages/seller/Account"));
 const SellerCustomerSupport = lazy(() =>
   import("../pages/seller/CustomerSupport")
 );
@@ -41,6 +41,7 @@ const SellerAllProducts = lazy(() => import("../pages/seller/AllProducts"));
 const OrderConfirmation = lazy(() => import("../pages/OrderConfirmation"));
 const Contact = lazy(() => import("../pages/Contact"));
 const Search = lazy(() => import("../pages/Search"));
+const SellerProductDetail = lazy(() => import("../pages/seller/ProductDetail"));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -341,6 +342,14 @@ export const routes = [
         ),
       },
       {
+        path: "products/:id",
+        element: (
+          <LazyRoute>
+            <SellerProductDetail />
+          </LazyRoute>
+        ),
+      },
+      {
         path: "orders",
         element: (
           <LazyRoute>
@@ -360,7 +369,7 @@ export const routes = [
         path: "settings",
         element: (
           <LazyRoute>
-            <SellerSettings />
+            <SellerAccount />
           </LazyRoute>
         ),
       },

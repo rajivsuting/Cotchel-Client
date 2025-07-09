@@ -346,7 +346,7 @@ const Cart = () => {
                       Looks like you haven't added any items to your cart yet.
                     </p>
                     <Link
-                      to="/products"
+                      to="/"
                       className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-[#0D0B46] hover:bg-[#23206a] transition-colors"
                     >
                       Start Shopping

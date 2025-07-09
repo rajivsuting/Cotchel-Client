@@ -137,7 +137,7 @@ const Wishlist = () => {
             Start adding items to your wishlist to see them here.
           </p>
           <Link
-            to="/products"
+            to="/"
             className="inline-flex items-center gap-2 bg-[#0D0B46] text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-[#23206a] transition-colors text-sm sm:text-base"
           >
             <FaArrowLeft className="w-4 h-4" />

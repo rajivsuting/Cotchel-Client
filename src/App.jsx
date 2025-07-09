@@ -33,7 +33,7 @@ const SellerOverview = lazy(() => import("./pages/seller/Overview"));
 const SellerProducts = lazy(() => import("./pages/seller/Products"));
 const SellerOrders = lazy(() => import("./pages/seller/Orders"));
 const SellerEarnings = lazy(() => import("./pages/seller/Earnings"));
-const SellerSettings = lazy(() => import("./pages/seller/Settings"));
+const SellerSettings = lazy(() => import("./pages/seller/Account"));
 
 // Lazy load pages
 const Home = lazy(() => import("./pages/Home"));
