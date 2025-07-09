@@ -206,18 +206,15 @@ const Navbar = () => {
     setSearchQuery("");
   };
 
-  // Handle product card click
-  const handleProductCardClick = (productId) => {
-    console.log("Product card clicked:", productId);
-    alert(`Navigating to product: ${productId}`); // Temporary test
+  // Update: Always navigate to /search?q=... for all search dropdown actions
+
+  // Update handleProductCardClick to use product title and navigate to search
+  const handleProductCardClick = (productTitle) => {
+    saveRecentSearch(productTitle);
+    navigate(`/search?q=${encodeURIComponent(productTitle)}`);
     setShowSuggestions(false);
     setSearchQuery("");
     setSelectedSuggestionIndex(-1);
-
-    // Small delay to ensure click event is handled
-    setTimeout(() => {
-      navigate(`/product/${productId}`);
-    }, 100);
   };
 
   // Clear recent searches
@@ -253,7 +250,7 @@ const Navbar = () => {
           if (selectedSuggestionIndex < searchProducts.length) {
             // Navigate to product
             const product = searchProducts[selectedSuggestionIndex];
-            handleProductCardClick(product.id);
+            handleProductCardClick(product.title);
           } else if (
             selectedSuggestionIndex <
             searchProducts.length + searchSuggestions.length
@@ -540,7 +537,7 @@ const Navbar = () => {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleProductCardClick(product.id);
+                                handleProductCardClick(product.title); // Use title, not id
                               }}
                               className={`w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-0 bg-transparent ${
                                 index === selectedSuggestionIndex
@@ -892,7 +889,7 @@ const Navbar = () => {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          handleProductCardClick(product.id);
+                          handleProductCardClick(product.title);
                         }}
                         className={`w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-0 bg-transparent ${
                           index === selectedSuggestionIndex ? "bg-gray-50" : ""
