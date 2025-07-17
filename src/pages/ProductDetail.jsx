@@ -8,6 +8,8 @@ import {
   FaCheck,
 } from "react-icons/fa";
 import { AiOutlineStar } from "react-icons/ai";
+import { FiHeart, FiShare2 } from "react-icons/fi";
+import { AiFillHeart } from "react-icons/ai";
 import { MdCheckCircle } from "react-icons/md";
 import { toast } from "react-toastify";
 import api from "../services/apiService";
@@ -372,12 +374,37 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Main Image */}
-                  <div className="w-full sm:w-[80%] h-full flex items-center justify-center bg-gray-100 p-2 sm:p-3 md:p-5 shadow-md rounded-md border-gray-500">
+                  <div className="w-full sm:w-[80%] h-full flex items-center justify-center bg-gray-100 p-2 sm:p-3 md:p-5 shadow-md rounded-md border-gray-500 relative">
                     <img
                       src={mainImage}
                       alt="Main Product"
                       className="object-contain h-full w-full hover:scale-105 transition-transform cursor-zoom-in"
                     />
+                    {/* Wishlist and Share Icons */}
+                    <div className="absolute top-2 right-2 flex z-10">
+                      <button
+                        onClick={handleWishlist}
+                        disabled={actionLoading.wishlist}
+                        className="min-w-[48px] min-h-[48px] flex items-center justify-center"
+                        aria-label={
+                          isWishlisted
+                            ? "Remove from wishlist"
+                            : "Add to wishlist"
+                        }
+                      >
+                        {isWishlisted ? (
+                          <AiFillHeart
+                            className="!w-6 !h-6 text-red-500 transition-colors"
+                            style={{ fontSize: "3rem" }}
+                          />
+                        ) : (
+                          <FiHeart
+                            className="!w-6 !h-6 text-gray-400 transition-colors"
+                            style={{ fontSize: "3rem" }}
+                          />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -411,8 +438,28 @@ const ProductDetail = () => {
 
               {/* Right: Product Details */}
               <div className="w-full lg:w-[52%] lg:pl-4 mt-4 lg:mt-0">
-                <h1 className="text-2xl md:text-3xl font-semibold mb-2 md:mb-3">
+                <h1 className="text-2xl md:text-3xl font-semibold mb-2 md:mb-3 flex items-center gap-3">
                   {product.title}
+                  <button
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: product.title,
+                          url: window.location.href,
+                        });
+                      } else {
+                        navigator.clipboard.writeText(window.location.href);
+                        toast.success("Product link copied to clipboard!");
+                      }
+                    }}
+                    className="min-w-[48px] min-h-[48px] flex items-center justify-center"
+                    aria-label="Share product"
+                  >
+                    <FiShare2
+                      className="!w-6 !h-6 text-gray-500"
+                      style={{ fontSize: "3rem" }}
+                    />
+                  </button>
                 </h1>
 
                 <div className="flex items-center gap-2 mb-3 md:mb-4">
@@ -856,23 +903,20 @@ const ProductDetail = () => {
                       </div>
                     ))
                 : similarProducts.map((product) => (
-                    <Link
-                      to={`/product-details/${product._id}`}
+                    <ProductCard
                       key={product._id}
-                    >
-                      <ProductCard
-                        title={product.title}
-                        image={product.featuredImage}
-                        rating={product.ratings || 0}
-                        price={product.price}
-                        originalPrice={product.compareAtPrice}
-                        discount={Math.round(
-                          ((product.compareAtPrice - product.price) /
-                            product.compareAtPrice) *
-                            100
-                        )}
-                      />
-                    </Link>
+                      id={product._id}
+                      title={product.title}
+                      image={product.featuredImage}
+                      rating={product.ratings || 0}
+                      price={product.price}
+                      originalPrice={product.compareAtPrice}
+                      discount={Math.round(
+                        ((product.compareAtPrice - product.price) /
+                          product.compareAtPrice) *
+                          100
+                      )}
+                    />
                   ))}
             </div>
 
@@ -880,7 +924,7 @@ const ProductDetail = () => {
             {similarProducts.length > 10 && (
               <div className="flex items-center justify-center mt-8">
                 <Link
-                  to="/products"
+                  to={`/product/${id}`}
                   className="w-[181.52px] mx-auto border border-[#28A745] rounded text-[#28A745] px-[25px] py-[16px] text-center whitespace-nowrap"
                 >
                   View All Products
@@ -890,7 +934,6 @@ const ProductDetail = () => {
           </section>
         </div>
       </div>
-      <Footer />
     </ErrorBoundary>
   );
 };

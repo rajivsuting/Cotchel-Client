@@ -20,7 +20,10 @@ const cartSlice = createSlice({
     setCartItems: (state, action) => {
       if (Array.isArray(action.payload)) {
         state.items = action.payload;
-        state.count = action.payload.length;
+        state.count = action.payload.reduce(
+          (sum, item) => sum + (item.quantity || 0),
+          0
+        );
       }
     },
     setCartCount: (state, action) => {
@@ -36,7 +39,10 @@ const cartSlice = createSlice({
         } else {
           state.items.push(action.payload);
         }
-        state.count = state.items.length;
+        state.count = state.items.reduce(
+          (sum, item) => sum + (item.quantity || 0),
+          0
+        );
       }
     },
     removeFromCart: (state, action) => {
@@ -44,7 +50,10 @@ const cartSlice = createSlice({
         state.items = state.items.filter(
           (item) => item.productId._id !== action.payload
         );
-        state.count = state.items.length;
+        state.count = state.items.reduce(
+          (sum, item) => sum + (item.quantity || 0),
+          0
+        );
       }
     },
     updateCartItem: (state, action) => {

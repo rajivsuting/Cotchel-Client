@@ -28,12 +28,6 @@ axios.defaults.withCredentials = true;
 axios.defaults.headers.common["Content-Type"] = "application/json";
 
 import { NotificationProvider } from "./context/NotificationContext";
-const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
-const SellerOverview = lazy(() => import("./pages/seller/Overview"));
-const SellerProducts = lazy(() => import("./pages/seller/Products"));
-const SellerOrders = lazy(() => import("./pages/seller/Orders"));
-const SellerEarnings = lazy(() => import("./pages/seller/Earnings"));
-const SellerSettings = lazy(() => import("./pages/seller/Account"));
 
 // Lazy load pages
 const Home = lazy(() => import("./pages/Home"));

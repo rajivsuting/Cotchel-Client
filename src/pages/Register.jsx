@@ -5,7 +5,7 @@ import api from "../services/apiService";
 import { API } from "../config/api";
 import { FcGoogle } from "react-icons/fc";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 
 const steps = ["Basic Info", "OTP Verification", "Additional Info"];
@@ -23,11 +23,14 @@ const CompleteProfileModal = ({ user, onComplete }) => {
   const [phoneError, setPhoneError] = useState("");
   const [error, setError] = useState("");
 
+  // Indian phone number regex: starts with 6-9, 10 digits
+  const indianPhoneRegex = /^[6-9]\d{9}$/;
+
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/\D/g, "");
     setPhone(value);
-    if (value.length !== 10) {
-      setPhoneError("Phone number must be 10 digits");
+    if (!indianPhoneRegex.test(value)) {
+      setPhoneError("Enter a valid Indian phone number");
     } else {
       setPhoneError("");
     }
@@ -40,8 +43,8 @@ const CompleteProfileModal = ({ user, onComplete }) => {
       setError("Please fill in all required fields.");
       return;
     }
-    if (phone.length !== 10) {
-      setPhoneError("Phone number must be 10 digits");
+    if (!indianPhoneRegex.test(phone)) {
+      setPhoneError("Enter a valid phone number");
       return;
     }
     setLoading(true);
@@ -215,9 +218,9 @@ const RegisterContent = () => {
         setForm((prev) => ({ ...prev, otp: ["", "", "", "", "", ""] }));
         setStep(1);
       } catch (err) {
-        setErrors({
-          general: err.response?.data?.message || "Registration failed",
-        });
+        const msg = err.response?.data?.message || "Registration failed";
+        setErrors({});
+        toast.error(msg);
       } finally {
         setSubmitting(false);
       }
@@ -270,12 +273,20 @@ const RegisterContent = () => {
         dateOfBirth: form.dob,
         gender: form.gender,
       });
-      navigate("/login");
+      // Check if user came from become-seller flow
+      const urlParams = new URLSearchParams(window.location.search);
+      const role = urlParams.get("role");
+
+      if (role === "seller") {
+        navigate("/seller-details");
+      } else {
+        navigate("/login");
+      }
     } catch (err) {
-      setErrors({
-        general:
-          err.response?.data?.message || "Failed to complete registration",
-      });
+      const msg =
+        err.response?.data?.message || "Failed to complete registration";
+      setErrors({});
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -361,7 +372,15 @@ const RegisterContent = () => {
             return;
           }
           toast.success("Google sign up successful!");
-          navigate("/");
+          // Check if user came from become-seller flow
+          const urlParams = new URLSearchParams(window.location.search);
+          const role = urlParams.get("role");
+
+          if (role === "seller") {
+            navigate("/seller-details");
+          } else {
+            navigate("/");
+          }
         } else {
           toast.error(result.data.message || "Google sign up failed");
         }
@@ -401,7 +420,8 @@ const RegisterContent = () => {
             </h2>
             {step === 1 && (
               <p className="text-sm text-gray-500 mb-4">
-                You may have received it on rajivsuting16@gmail.com
+                You may have received it on{" "}
+                <span className="font-semibold">{form.email}</span>
               </p>
             )}
             <form
@@ -444,6 +464,8 @@ const RegisterContent = () => {
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
                         errors.password ? "ring-2 ring-red-400" : ""
                       }`}
+                      onCopy={(e) => e.preventDefault()}
+                      onPaste={(e) => e.preventDefault()}
                     />
                     <button
                       type="button"
@@ -489,6 +511,8 @@ const RegisterContent = () => {
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
                         errors.confirmPassword ? "ring-2 ring-red-400" : ""
                       }`}
+                      onCopy={(e) => e.preventDefault()}
+                      onPaste={(e) => e.preventDefault()}
                     />
                     <button
                       type="button"
@@ -716,9 +740,6 @@ const RegisterContent = () => {
                   </p>
                 </>
               )}
-              {errors.general && (
-                <p className="text-xs text-red-500 mb-2">{errors.general}</p>
-              )}
             </form>
           </div>
         </div>
@@ -729,7 +750,15 @@ const RegisterContent = () => {
           onComplete={() => {
             setShowCompleteProfile(false);
             toast.success("Profile completed successfully!");
-            navigate("/");
+            // Check if user came from become-seller flow
+            const urlParams = new URLSearchParams(window.location.search);
+            const role = urlParams.get("role");
+
+            if (role === "seller") {
+              navigate("/seller-details");
+            } else {
+              navigate("/");
+            }
           }}
         />
       )}

@@ -25,7 +25,7 @@ const ManageAddress = () => {
     city: "",
     state: "",
     postalCode: "",
-    country: "",
+    country: "India",
     isDefault: false,
   });
   const [errors, setErrors] = useState({});
@@ -71,7 +71,10 @@ const ManageAddress = () => {
   const validateField = (name, value) => {
     switch (name) {
       case "name":
-        return !value.trim() ? "Full name is required" : "";
+        if (!value.trim()) return "Full name is required";
+        if (!/^[a-zA-Z. ]+$/.test(value.trim()))
+          return "Name cannot contain special characters or numbers";
+        return "";
       case "phone":
         return validatePhone(value);
       case "addressLine1":
@@ -222,7 +225,7 @@ const ManageAddress = () => {
         city: "",
         state: "",
         postalCode: "",
-        country: "",
+        country: "India",
         isDefault: false,
       });
       setErrors({});
@@ -292,9 +295,11 @@ const ManageAddress = () => {
                   city: "",
                   state: "",
                   postalCode: "",
-                  country: "",
+                  country: "India",
                   isDefault: false,
                 });
+                setSelectedState("");
+                setSelectedCity("");
                 setErrors({});
                 setTouched({});
               }}
@@ -491,15 +496,9 @@ const ManageAddress = () => {
                     <input
                       type="text"
                       name="country"
-                      value={formData.country}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
-                        errors.country && touched.country
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300"
-                      }`}
-                      placeholder="Enter country name"
+                      value="India"
+                      disabled
+                      className="w-full border rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed"
                     />
                     {errors.country && touched.country && (
                       <p className="mt-1 text-sm text-red-600">
@@ -797,15 +796,9 @@ const ManageAddress = () => {
                       <input
                         type="text"
                         name="country"
-                        value={formData.country}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className={`w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46] ${
-                          errors.country && touched.country
-                            ? "border-red-500 focus:ring-red-500"
-                            : "border-gray-300"
-                        }`}
-                        placeholder="Enter country name"
+                        value="India"
+                        disabled
+                        className="w-full border rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed"
                       />
                       {errors.country && touched.country && (
                         <p className="mt-1 text-sm text-red-600">

@@ -70,7 +70,11 @@ const Cart = () => {
         const cartData = response.data.data;
         if (cartData.items && Array.isArray(cartData.items)) {
           dispatch(setCartItems(cartData.items));
-          dispatch(setCartCount(cartData.items.length));
+          const totalItems = cartData.items.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          );
+          dispatch(setCartCount(totalItems));
         }
       }
     } catch (error) {
@@ -103,6 +107,11 @@ const Cart = () => {
         const updatedCart = response.data.data;
         if (updatedCart.items && Array.isArray(updatedCart.items)) {
           dispatch(setCartItems(updatedCart.items));
+          const totalItems = updatedCart.items.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          );
+          dispatch(setCartCount(totalItems));
         }
       }
     } catch (error) {
@@ -123,7 +132,8 @@ const Cart = () => {
         withCredentials: true,
       });
 
-      fetchCart();
+      await fetchCart();
+      // fetchCart already updates cart count
       toast.success("Item removed successfully");
     } catch (error) {
       console.error("Error removing item:", error);
@@ -393,8 +403,8 @@ const Cart = () => {
                         <span>Secure Checkout</span>
                       </div>
                       <div className="flex items-center gap-3 text-sm text-gray-500">
-                        <FiTruck className="w-5 h-5 text-[#0c0b45]" />
-                        <span>Free Delivery on orders above ₹999</span>
+                        <FiClock className="w-5 h-5 text-[#0c0b45]" />
+                        <span>Easy Returns within 7 days</span>
                       </div>
                     </div>
                   </div>

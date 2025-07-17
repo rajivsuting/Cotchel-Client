@@ -10,6 +10,8 @@ const RequestReset = () => {
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resentSuccess, setResentSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,15 +85,48 @@ const RequestReset = () => {
                   >
                     Back to Login
                   </Link>
-                  <button
-                    onClick={() => {
-                      setEmailSent(false);
-                      setEmail("");
-                    }}
-                    className="block w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                  >
-                    Send Another Email
-                  </button>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => {
+                        setEmailSent(false);
+                        setEmail("");
+                      }}
+                      className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                    >
+                      Send Another Email
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setResending(true);
+                        try {
+                          const response = await api.post(
+                            API.AUTH.REQUEST_RESET,
+                            { email }
+                          );
+                          if (response.data.message) {
+                            toast.success("Password reset link resent!");
+                            setResentSuccess(true);
+                            setTimeout(() => setResentSuccess(false), 2000);
+                          }
+                        } catch (error) {
+                          const errorMessage =
+                            error.response?.data?.message ||
+                            "Failed to resend reset link. Please try again.";
+                          toast.error(errorMessage);
+                        } finally {
+                          setResending(false);
+                        }
+                      }}
+                      className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200`}
+                      disabled={resending}
+                    >
+                      {resentSuccess
+                        ? "Link Sent!"
+                        : resending
+                        ? "Resending..."
+                        : "Resend Link"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

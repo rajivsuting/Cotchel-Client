@@ -209,6 +209,11 @@ const AddressSelection = () => {
       case "state":
         if (!value) error = "State is required";
         break;
+      case "name":
+        if (!value.trim()) error = "Full name is required";
+        else if (!/^[a-zA-Z. ]+$/.test(value.trim()))
+          error = "Name cannot contain special characters or numbers";
+        break;
       default:
         break;
     }
@@ -635,12 +640,13 @@ const AddressSelection = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Country <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      className="w-full p-2 border rounded-md bg-gray-100"
+                    <input
+                      type="text"
+                      name="country"
+                      value="India"
                       disabled
-                    >
-                      <option value={india.isoCode}>{india.name}</option>
-                    </select>
+                      className="w-full p-2 border rounded-md bg-gray-100 cursor-not-allowed"
+                    />
                   </div>
 
                   <div>

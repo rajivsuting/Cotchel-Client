@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { FcGoogle } from "react-icons/fc";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
 import api from "../services/apiService";
@@ -20,11 +20,14 @@ const CompleteProfileModal = ({ user, onComplete }) => {
   const [phoneError, setPhoneError] = useState("");
   const [error, setError] = useState("");
 
+  // Indian phone number regex: starts with 6-9, 10 digits
+  const indianPhoneRegex = /^[6-9]\d{9}$/;
+
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/\D/g, "");
     setPhone(value);
-    if (value.length !== 10) {
-      setPhoneError("Phone number must be 10 digits");
+    if (!indianPhoneRegex.test(value)) {
+      setPhoneError("Enter a valid phone number");
     } else {
       setPhoneError("");
     }
@@ -37,8 +40,8 @@ const CompleteProfileModal = ({ user, onComplete }) => {
       setError("Please fill in all required fields.");
       return;
     }
-    if (phone.length !== 10) {
-      setPhoneError("Phone number must be 10 digits");
+    if (!indianPhoneRegex.test(phone)) {
+      setPhoneError("Enter a valid Indian phone number");
       return;
     }
     setLoading(true);
@@ -198,15 +201,15 @@ const LoginForm = () => {
     try {
       setLoading(true);
       const result = await login(formData.email, formData.password);
+      console.log(result);
       if (result.success) {
         toast.success("Login successful!");
         const from = location.state?.from?.pathname || "/";
         navigate(from, { replace: true });
       } else {
-        toast.error(result.error || "Login failed");
-        setErrors({
-          submit: result.error || "Login failed",
-        });
+        const msg = "Enter valid username and password";
+        toast.error(msg);
+        setErrors({});
       }
     } catch (error) {
       toast.error("An error occurred. Please try again.");
@@ -261,7 +264,6 @@ const LoginForm = () => {
                     id="email"
                     name="email"
                     type="email"
-                    required
                     value={formData.email}
                     onChange={handleChange}
                     className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
@@ -281,7 +283,6 @@ const LoginForm = () => {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    required
                     value={formData.password}
                     onChange={handleChange}
                     className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
@@ -307,9 +308,6 @@ const LoginForm = () => {
                     </p>
                   )}
                 </div>
-                {errors.submit && (
-                  <p className="text-xs text-red-500 mb-2">{errors.submit}</p>
-                )}
                 <div className="flex justify-end mb-2">
                   <Link
                     to="/request-reset"

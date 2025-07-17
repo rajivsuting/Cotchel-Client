@@ -75,6 +75,7 @@ const Navbar = () => {
   const cartCount = useSelector((state) => state.cart.count);
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState("");
+  const [searchError, setSearchError] = useState("");
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -101,33 +102,13 @@ const Navbar = () => {
     localStorage.setItem("recentSearches", JSON.stringify(updated));
   };
 
-  const fetchCartCount = async () => {
-    try {
-      const response = await api.get(API.CART.ITEM_COUNT, {
-        withCredentials: true,
-      });
-      if (response.data.success) {
-        dispatch(setCartCount(response.data.data.itemCount));
-      }
-    } catch (error) {
-      console.error("Error fetching cart count:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated()) {
-      fetchCartCount();
-    } else {
-      dispatch(setCartCount(0));
-    }
-  }, [isAuthenticated, dispatch]);
-
   // Handle search input changes with debounce
   const handleSearchChange = async (e) => {
     const query = e.target.value;
     setSearchQuery(query);
     setShowSuggestions(true);
     setSelectedSuggestionIndex(-1);
+    setSearchError(""); // Clear error on input change
 
     // Clear previous timeout
     if (searchTimeoutRef.current) {
@@ -177,13 +158,17 @@ const Navbar = () => {
   // Handle search submission
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      saveRecentSearch(searchQuery);
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSuggestions(false);
+    if (!searchQuery.trim()) {
+      setSearchError("Type something.");
       setSearchQuery("");
-      setSelectedSuggestionIndex(-1);
+      return;
     }
+    setSearchError("");
+    saveRecentSearch(searchQuery);
+    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    setShowSuggestions(false);
+    setSearchQuery("");
+    setSelectedSuggestionIndex(-1);
   };
 
   // Handle suggestion click
@@ -423,6 +408,32 @@ const Navbar = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const response = await api.get(API.CART.GET, { withCredentials: true });
+        if (response.data.data && response.data.data.items) {
+          const totalItems = response.data.data.items.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          );
+          dispatch(setCartCount(totalItems));
+        } else {
+          dispatch(setCartCount(0));
+        }
+      } catch (error) {
+        dispatch(setCartCount(0));
+      }
+    };
+    if (
+      isAuthenticated &&
+      typeof isAuthenticated === "function" &&
+      isAuthenticated()
+    ) {
+      fetchCartCount();
+    }
+  }, [isAuthenticated, dispatch]);
+
   return (
     <nav
       className={`w-full font-sans sticky top-0 z-50 ${
@@ -513,10 +524,21 @@ const Navbar = () => {
               <form onSubmit={handleSearchSubmit} className="relative">
                 <input
                   type="text"
-                  placeholder="Search for products, brands and more..."
-                  className="w-full px-4 py-2 pl-10 rounded-md text-gray-800 focus:outline-none border-2 border-transparent focus:border-[#0D0B46] shadow-md transition-all group-hover:shadow-lg bg-white/95"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
+                  placeholder={
+                    searchError
+                      ? searchError
+                      : "Search for products, brands and more..."
+                  }
+                  className={`w-full px-4 py-2 pl-10 rounded-md text-gray-800 focus:outline-none border-2 shadow-md transition-all group-hover:shadow-lg bg-white/95 ${
+                    searchError
+                      ? "border-red-500 placeholder-red-400"
+                      : "border-transparent focus:border-[#0D0B46]"
+                  }`}
+                  value={searchError ? "" : searchQuery}
+                  onChange={(e) => {
+                    handleSearchChange(e);
+                    if (searchError) setSearchError("");
+                  }}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
                 />
@@ -865,10 +887,13 @@ const Navbar = () => {
         <form onSubmit={handleSearchSubmit} className="relative">
           <input
             type="text"
-            placeholder="Search products..."
-            className="w-full px-4 py-2 pl-10 rounded-md text-gray-800 focus:outline-none border-2 border-transparent focus:border-[#23206a] shadow-md bg-white/95"
-            value={searchQuery}
-            onChange={handleSearchChange}
+            placeholder={searchError ? searchError : "Search products..."}
+            className="w-full px-4 py-2 pl-10 rounded-md text-gray-800 focus:outline-none border-2 shadow-md transition-all group-hover:shadow-lg bg-white/95"
+            value={searchError ? "" : searchQuery}
+            onChange={(e) => {
+              handleSearchChange(e);
+              if (searchError) setSearchError("");
+            }}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowSuggestions(true)}
           />

@@ -216,7 +216,11 @@ const Home = () => {
           const cartData = response.data.data;
           if (cartData.items && Array.isArray(cartData.items)) {
             dispatch(setCartItems(cartData.items));
-            dispatch(setCartCount(cartData.items.length));
+            const totalItems = cartData.items.reduce(
+              (sum, item) => sum + (item.quantity || 0),
+              0
+            );
+            dispatch(setCartCount(totalItems));
             toast.success(response.data.message);
           }
         } else {
@@ -527,7 +531,7 @@ const Home = () => {
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-white"
+                  className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-white"
                 />
                 <button
                   type="submit"

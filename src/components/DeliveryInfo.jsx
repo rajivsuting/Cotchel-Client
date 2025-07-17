@@ -8,8 +8,10 @@ const DeliveryInfo = () => {
           <FiTruck className="w-6 h-6 text-[#0D0B46]" />
         </div>
         <div>
-          <h3 className="font-semibold text-gray-800">Free Delivery</h3>
-          <p className="text-sm text-gray-500">On orders above ₹999</p>
+          <h3 className="font-semibold text-gray-800">
+            Fast & Reliable Delivery
+          </h3>
+          <p className="text-sm text-gray-500">Fast delivery all over India</p>
         </div>
       </div>
 
