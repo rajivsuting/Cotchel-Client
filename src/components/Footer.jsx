@@ -147,7 +147,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-white/10 mt-12 pt-8 text-center text-gray-300">
           <p>&copy; {new Date().getFullYear()} Cotchel. All rights reserved.</p>
-          <p>Version. 1</p>
+          <p>Version. 1.1</p>
         </div>
       </div>
     </footer>
