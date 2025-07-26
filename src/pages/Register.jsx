@@ -27,10 +27,12 @@ const CompleteProfileModal = ({ user, onComplete }) => {
   const indianPhoneRegex = /^[6-9]\d{9}$/;
 
   const handlePhoneChange = (e) => {
-    const value = e.target.value.replace(/\D/g, "");
+    const value = e.target.value.replace(/\D/g, "").slice(0, 10);
     setPhone(value);
     if (!indianPhoneRegex.test(value)) {
-      setPhoneError("Enter a valid Indian phone number");
+      setPhoneError(
+        "Please enter a valid 10-digit phone number starting with 6-9"
+      );
     } else {
       setPhoneError("");
     }
@@ -80,10 +82,11 @@ const CompleteProfileModal = ({ user, onComplete }) => {
               value={phone}
               maxLength={10}
               onChange={handlePhoneChange}
-              placeholder="Enter your phone number"
+              placeholder="Enter 10-digit phone number starting with 6-9"
               className={`w-full border rounded-lg p-2 mt-2 focus:outline-none focus:ring-1 focus:ring-[#0c0b45] ${
                 phoneError ? "border-red-500" : ""
               }`}
+              inputMode="numeric"
             />
             {phoneError && (
               <p className="text-red-500 text-xs mt-1">{phoneError}</p>
@@ -180,9 +183,14 @@ const RegisterContent = () => {
         errs.otp = "OTP must be 6 digits";
     } else if (step === 2) {
       if (!form.fullName.trim()) errs.fullName = "Full name is required";
+      else if (!/^[a-zA-Z. ]+$/.test(form.fullName.trim()))
+        errs.fullName = "Name cannot contain special characters or numbers";
+      else if (form.fullName.trim().length > 40)
+        errs.fullName = "Name cannot exceed 40 characters";
       if (!form.phone.trim()) errs.phone = "Phone is required";
-      else if (!/^\d{10}$/.test(form.phone))
-        errs.phone = "Phone must be exactly 10 digits";
+      else if (!/^[6-9]\d{9}$/.test(form.phone))
+        errs.phone =
+          "Please enter a valid 10-digit phone number starting with 6-9";
       if (!form.dob) errs.dob = "Date of birth is required";
       if (!form.gender) errs.gender = "Gender is required";
     }
@@ -616,6 +624,7 @@ const RegisterContent = () => {
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
                         errors.fullName ? "ring-2 ring-red-400" : ""
                       }`}
+                      maxLength={40}
                     />
                     {errors.fullName && (
                       <p className="text-xs text-red-500 mt-1">
@@ -634,8 +643,9 @@ const RegisterContent = () => {
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={10}
+                      placeholder="Enter 10-digit phone number starting with 6-9"
                       onChange={(e) => {
-                        // Only allow digits
+                        // Only allow digits and limit to 10 characters
                         const value = e.target.value
                           .replace(/\D/g, "")
                           .slice(0, 10);

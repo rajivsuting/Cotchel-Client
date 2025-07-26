@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   FaStar,
@@ -11,7 +11,7 @@ import { AiOutlineStar } from "react-icons/ai";
 import { FiHeart, FiShare2 } from "react-icons/fi";
 import { AiFillHeart } from "react-icons/ai";
 import { MdCheckCircle } from "react-icons/md";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import api from "../services/apiService";
 import { API, handleApiError } from "../config/api";
 import { useAuth } from "../context/AuthContext";
@@ -21,13 +21,135 @@ import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import { useDispatch } from "react-redux";
-import { addToCart, setCartCount } from "../redux/slices/cartSlice";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  addToCart,
+  setCartCount,
+  setCartItems,
+} from "../redux/slices/cartSlice";
+import { extractCartData, fetchAndSyncCart } from "../utils/cartUtils";
+import Zoom from "react-medium-image-zoom";
+import "react-medium-image-zoom/dist/styles.css";
+
+// Custom Magnifier component
+function Magnifier({ src, zoom = 2, alt }) {
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
+  const imgRef = useRef(null);
+
+  const handleMouseEnter = (e) => {
+    setShow(true);
+    const { width, height } = imgRef.current.getBoundingClientRect();
+    setImgSize({ width, height });
+  };
+
+  const handleMouseMove = (e) => {
+    const { left, top } = imgRef.current.getBoundingClientRect();
+    const x = e.clientX - left;
+    const y = e.clientY - top;
+    setPos({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setShow(false);
+  };
+
+  // Mobile: tap to zoom (show full image)
+  const [mobileZoom, setMobileZoom] = useState(false);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 600;
+
+  // Calculate magnifier position so it doesn't overflow viewport
+  const getMagnifierStyle = () => {
+    const base = {
+      position: "absolute",
+      pointerEvents: "none",
+      top: 0,
+      left: imgSize.width + 24, // 24px gap
+      width: imgSize.width,
+      height: imgSize.height,
+      border: "2px solid #0c0b45",
+      background: `url(${src}) no-repeat`,
+      backgroundSize: `${imgSize.width * zoom}px ${imgSize.height * zoom}px`,
+      backgroundPosition: `-${pos.x * (zoom - 1)}px -${pos.y * (zoom - 1)}px`,
+      zIndex: 10,
+      boxShadow: "0 4px 24px rgba(44,62,80,0.18)",
+      borderRadius: 12,
+      transition: "opacity 0.18s cubic-bezier(.4,0,.2,1)",
+      opacity: show ? 1 : 0,
+      backgroundColor: "#fff",
+      cursor: "crosshair",
+      overflow: "hidden",
+    };
+    // Prevent overflow on right
+    if (typeof window !== "undefined" && imgRef.current) {
+      const rect = imgRef.current.getBoundingClientRect();
+      const rightEdge = rect.left + rect.width + 24 + imgSize.width;
+      if (rightEdge > window.innerWidth) {
+        base.left = -imgSize.width - 24;
+      }
+    }
+    return base;
+  };
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        className="object-contain h-full w-full cursor-crosshair"
+        style={{
+          maxHeight: "100%",
+          maxWidth: "100%",
+          borderRadius: 12,
+          boxShadow: show ? "0 2px 12px rgba(44,62,80,0.10)" : undefined,
+          transition: "box-shadow 0.18s cubic-bezier(.4,0,.2,1)",
+        }}
+        onMouseEnter={isMobile ? undefined : handleMouseEnter}
+        onMouseMove={isMobile ? undefined : handleMouseMove}
+        onMouseLeave={isMobile ? undefined : handleMouseLeave}
+        onClick={isMobile ? () => setMobileZoom(true) : undefined}
+      />
+      {/* Magnifier glass (desktop only) */}
+      {show && !isMobile && <div style={getMagnifierStyle()} />}
+      {/* Mobile full image modal */}
+      {mobileZoom && isMobile && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.8)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setMobileZoom(false)}
+        >
+          <img
+            src={src}
+            alt={alt}
+            style={{
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              borderRadius: 12,
+              boxShadow: "0 4px 24px rgba(44,62,80,0.18)",
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState("");
@@ -42,20 +164,34 @@ const ProductDetail = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("description");
   const dispatch = useDispatch();
+  const cartItems = useSelector((state) => state.cart.items);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [wishlistedProducts, setWishlistedProducts] = useState(new Set());
+  const [canReview, setCanReview] = useState(false);
 
   // Calculate average rating and distribution
   const averageRating = product?.reviews?.length
     ? (
-        product.reviews.reduce((acc, review) => acc + review.rating, 0) /
-        product.reviews.length
+        product.reviews.reduce(
+          (acc, review) => acc + (Number(review.rating) || 0),
+          0
+        ) / product.reviews.length
       ).toFixed(1)
-    : 0;
-  const totalReviews = product?.reviews?.length || 0;
-  const ratingDistribution = [5, 4, 3, 2, 1].map(
-    (rating) =>
-      product?.reviews?.filter((review) => Math.round(review.rating) === rating)
-        .length || 0
-  );
+    : product?.ratings || 0;
+  const totalReviews = product?.reviews?.length || product?.reviewsCount || 0;
+  const ratingDistribution = [5, 4, 3, 2, 1].map((rating) => {
+    const count =
+      product?.reviews?.filter((review) => {
+        // Ensure rating is a number and handle edge cases
+        const reviewRating = Number(review.rating) || 0;
+        const matches = Math.floor(reviewRating) === rating;
+        return matches;
+      }).length || 0;
+    return count;
+  });
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString("en-US", {
@@ -63,6 +199,76 @@ const ProductDetail = () => {
       month: "long",
       day: "numeric",
     });
+  };
+
+  // Check if user can review this product
+  const checkReviewEligibility = async (productData = null) => {
+    console.log("checkReviewEligibility called");
+    console.log("isAuthenticated():", isAuthenticated());
+    console.log("product:", productData || product);
+    if (!isAuthenticated() || !(productData || product)) {
+      console.log(
+        "Exiting early - user not authenticated or product not loaded"
+      );
+      return;
+    }
+
+    const productToCheck = productData || product;
+
+    try {
+      const response = await api.get(API.ORDERS.ALL);
+      const userOrders = response.data.orders || [];
+
+      console.log("=== REVIEW ELIGIBILITY DEBUG ===");
+      console.log(
+        "Product ID:",
+        productToCheck._id,
+        "Type:",
+        typeof productToCheck._id
+      );
+      console.log("Total user orders:", userOrders.length);
+
+      // Check if user has any completed or shipped order for this product
+      const hasEligibleOrder = userOrders.some((order) => {
+        console.log("Checking order:", order._id);
+        console.log("Order status:", order.status);
+        console.log("Payment status:", order.paymentStatus);
+        console.log("Order products:", order.products);
+
+        const statusMatch =
+          order.status === "Completed" || order.status === "Shipped";
+        const paymentMatch = order.paymentStatus === "Paid";
+        const productMatch = order.products.some((productItem) => {
+          console.log("Product item:", productItem);
+          console.log(
+            "Comparing:",
+            productItem.productId,
+            "with",
+            productToCheck._id
+          );
+          console.log(
+            "Types:",
+            typeof productItem.productId,
+            typeof productToCheck._id
+          );
+          return productItem.productId === productToCheck._id;
+        });
+
+        console.log("Status match:", statusMatch);
+        console.log("Payment match:", paymentMatch);
+        console.log("Product match:", productMatch);
+
+        return statusMatch && paymentMatch && productMatch;
+      });
+
+      console.log("Final eligibility result:", hasEligibleOrder);
+      console.log("=== END REVIEW ELIGIBILITY DEBUG ===");
+
+      setCanReview(hasEligibleOrder);
+    } catch (error) {
+      console.error("Error checking review eligibility:", error);
+      setCanReview(false);
+    }
   };
 
   const handleTabChange = (tab) => {
@@ -82,13 +288,35 @@ const ProductDetail = () => {
       navigate("/login", { state: { from: `/product/${id}` } });
       return;
     }
+
     try {
       setActionLoading((prev) => ({ ...prev, cart: true }));
       setLoadingProductId(product._id);
-      // Add product to cart (or update quantity if already in cart)
-      await api.post(API.CART.ADD_ITEM, { productId: id, quantity });
-      // Navigate to address selection for buy now flow
-      navigate("/address-selection", { state: { from: "buy-now" } });
+
+      // Store buy now data in sessionStorage (not cart)
+      const buyNowData = {
+        productId: id,
+        quantity: quantity,
+        product: {
+          _id: product._id,
+          title: product.title,
+          price: product.price,
+          featuredImage: product.featuredImage,
+          lotSize: product.lotSize,
+        },
+        timestamp: Date.now(),
+      };
+
+      sessionStorage.setItem("buyNowData", JSON.stringify(buyNowData));
+
+      // Navigate directly to address selection for buy now
+      navigate("/address-selection", {
+        state: {
+          from: "buy-now",
+          productId: id,
+          quantity: quantity,
+        },
+      });
     } catch (error) {
       console.error("Error in Buy Now:", error);
       if (error.response?.status === 401) {
@@ -112,6 +340,12 @@ const ProductDetail = () => {
         const response = await api.get(API.PRODUCTS.DETAILS(id));
 
         const { product: productData, relatedProducts } = response.data;
+
+        // Ensure reviews array exists and has proper structure
+        if (productData && !productData.reviews) {
+          productData.reviews = [];
+        }
+
         setProduct(productData);
         setMainImage(productData.featuredImage);
         setSimilarProducts(relatedProducts || []);
@@ -123,6 +357,16 @@ const ProductDetail = () => {
           setIsWishlisted(
             wishlistItems.some((item) => item.productId._id === id)
           );
+          // Store all wishlisted product IDs for related products
+          const wishlistedIds = new Set(
+            wishlistItems.map((item) => item.productId._id)
+          );
+          setWishlistedProducts(wishlistedIds);
+        }
+
+        // Check review eligibility after product is loaded
+        if (isAuthenticated()) {
+          await checkReviewEligibility(productData);
         }
       } catch (error) {
         console.error("Error fetching product:", error);
@@ -154,8 +398,7 @@ const ProductDetail = () => {
       });
 
       if (response.data.success) {
-        dispatch(addToCart(response.data.data));
-        dispatch(setCartCount(response.data.data.items.length));
+        await fetchAndSyncCart(dispatch);
         toast.success("Item added to cart successfully");
       } else {
         toast.error(response.data.message || "Failed to add item to cart");
@@ -205,6 +448,81 @@ const ProductDetail = () => {
       setActionLoading((prev) => ({ ...prev, wishlist: false }));
     }
   };
+
+  // Add review submit handler
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated()) {
+      toast.info("Please sign in to write a review");
+      navigate("/login", { state: { from: `/product/${id}` } });
+      return;
+    }
+    if (!reviewComment.trim()) {
+      toast.error("Please enter a review comment.");
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      const response = await api.post(API.REVIEWS.ADD(id), {
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+
+      console.log("Review submission response:", response.data);
+      console.log("Current user data:", user);
+
+      if (response.data && response.data.success) {
+        // Use the returned review, but inject the current user's info for display
+        const newReview = {
+          ...response.data.review,
+          user: {
+            _id: user._id,
+            fullName: user.fullName || user.name || "Anonymous",
+          },
+          createdAt: response.data.review.createdAt || new Date().toISOString(),
+        };
+
+        setProduct((prev) => {
+          const updatedReviews = [newReview, ...(prev.reviews || [])];
+          const updatedCount = (prev.reviewsCount || 0) + 1;
+          const updatedRatings = (
+            updatedReviews.reduce((acc, r) => acc + (r.rating || 0), 0) /
+            updatedReviews.length
+          ).toFixed(1);
+
+          return {
+            ...prev,
+            reviews: updatedReviews,
+            reviewsCount: updatedCount,
+            ratings: updatedRatings,
+          };
+        });
+        setShowReviewForm(false);
+        setReviewComment("");
+        setReviewRating(5);
+        toast.success("Review submitted successfully!");
+      } else {
+        toast.error(response.data.message || "Failed to submit review");
+      }
+    } catch (error) {
+      console.error("Review submit error:", error?.response?.data || error);
+      if (
+        error.response?.status === 400 &&
+        error.response?.data?.message?.includes("already reviewed")
+      ) {
+        toast.error(
+          "You have already reviewed this product. You can only review each product once."
+        );
+      } else {
+        toast.error(handleApiError(error));
+      }
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  // Find if the current user has already reviewed
+  const userReview = product?.reviews?.find((r) => r.user?._id === user?._id);
 
   if (loading) {
     return (
@@ -375,11 +693,7 @@ const ProductDetail = () => {
 
                   {/* Main Image */}
                   <div className="w-full sm:w-[80%] h-full flex items-center justify-center bg-gray-100 p-2 sm:p-3 md:p-5 shadow-md rounded-md border-gray-500 relative">
-                    <img
-                      src={mainImage}
-                      alt="Main Product"
-                      className="object-contain h-full w-full hover:scale-105 transition-transform cursor-zoom-in"
-                    />
+                    <Magnifier src={mainImage} alt="Main Product" zoom={2.2} />
                     {/* Wishlist and Share Icons */}
                     <div className="absolute top-2 right-2 flex z-10">
                       <button
@@ -716,7 +1030,7 @@ const ProductDetail = () => {
                     {/* Right side - Rating distribution */}
                     <div className="p-6 md:w-2/3">
                       {[5, 4, 3, 2, 1].map((rating, index) => {
-                        const count = ratingDistribution[rating - 1];
+                        const count = ratingDistribution[index];
                         const percentage =
                           totalReviews > 0 ? (count / totalReviews) * 100 : 0;
 
@@ -748,6 +1062,114 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
+                {/* Inline Write Review Form */}
+                <div className="p-6 border-b border-gray-200">
+                  {isAuthenticated() ? (
+                    userReview ? (
+                      <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-3">
+                          <MdCheckCircle className="text-blue-600 text-xl" />
+                          <div>
+                            <h3 className="font-medium text-blue-900">
+                              You have already reviewed this product
+                            </h3>
+                            <p className="text-sm text-blue-700 mt-1">
+                              Thank you for your feedback! You can only review
+                              each product once.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : canReview ? (
+                      <form onSubmit={handleReviewSubmit} className="mb-4">
+                        <h2 className="text-lg font-bold mb-4 text-gray-900">
+                          Write a Review
+                        </h2>
+                        <div className="mb-4">
+                          <label className="block mb-2 font-medium text-gray-700">
+                            Rating *
+                          </label>
+                          <div className="flex gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                type="button"
+                                key={star}
+                                onClick={() => setReviewRating(star)}
+                                className={`text-2xl transition-colors ${
+                                  star <= reviewRating
+                                    ? "text-yellow-500 hover:text-yellow-600"
+                                    : "text-gray-300 hover:text-gray-400"
+                                }`}
+                                aria-label={`${star} star${
+                                  star > 1 ? "s" : ""
+                                }`}
+                              >
+                                <FaStar />
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {reviewRating === 1 && "Poor"}
+                            {reviewRating === 2 && "Fair"}
+                            {reviewRating === 3 && "Good"}
+                            {reviewRating === 4 && "Very Good"}
+                            {reviewRating === 5 && "Excellent"}
+                          </p>
+                        </div>
+                        <div className="mb-4">
+                          <label className="block mb-2 font-medium text-gray-700">
+                            Comment *
+                          </label>
+                          <textarea
+                            className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent transition-all"
+                            rows={4}
+                            value={reviewComment}
+                            onChange={(e) => setReviewComment(e.target.value)}
+                            placeholder="Share your experience with this product..."
+                            required
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="w-full bg-[#0c0b45] text-white py-3 rounded-lg font-medium hover:bg-[#0c0b45]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={reviewSubmitting}
+                        >
+                          {reviewSubmitting ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Submitting...
+                            </span>
+                          ) : (
+                            "Submit Review"
+                          )}
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                        <p className="text-gray-700 mb-3">
+                          You can only review products you have purchased and
+                          completed.
+                        </p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                      <p className="text-gray-700 mb-3">
+                        Sign in to share your experience with this product
+                      </p>
+                      <button
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0c0b45] text-white rounded-lg font-medium hover:bg-[#0c0b45]/90 transition-colors"
+                        onClick={() =>
+                          navigate("/login", {
+                            state: { from: `/product/${id}` },
+                          })
+                        }
+                      >
+                        Sign In to Review
+                      </button>
+                    </div>
+                  )}
+                </div>
                 {/* Individual Reviews Section */}
                 <div className="divide-y divide-gray-200">
                   {product.reviews && product.reviews.length > 0 ? (
@@ -761,11 +1183,12 @@ const ProductDetail = () => {
                           <div className="flex items-center">
                             {[...Array(5)].map((_, i) => {
                               const ratingValue = i + 1;
+                              const reviewRating = review.rating || 0;
                               return (
                                 <span key={i} className="mr-0.5">
-                                  {review.rating >= ratingValue ? (
+                                  {reviewRating >= ratingValue ? (
                                     <FaStar className="text-[#2e8e00] w-4 h-4" />
-                                  ) : review.rating >= ratingValue - 0.5 ? (
+                                  ) : reviewRating >= ratingValue - 0.5 ? (
                                     <FaStarHalfAlt className="text-[#2e8e00] w-4 h-4" />
                                   ) : (
                                     <FaRegStar className="text-gray-300 w-4 h-4" />
@@ -775,7 +1198,9 @@ const ProductDetail = () => {
                             })}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {formatDate(review.date || new Date())}
+                            {formatDate(
+                              review.createdAt || review.date || new Date()
+                            )}
                           </div>
                         </div>
 
@@ -829,32 +1254,28 @@ const ProductDetail = () => {
                       <p className="text-gray-600 mb-4">
                         No reviews yet. Be the first to share your experience!
                       </p>
-                      <button className="px-6 py-3 bg-[#0c0b45] text-white rounded text-sm font-medium hover:bg-opacity-90 transition-all">
-                        WRITE A REVIEW
-                      </button>
+                      {isAuthenticated() && canReview ? (
+                        <button
+                          className="px-6 py-3 bg-[#0c0b45] text-white rounded text-sm font-medium hover:bg-opacity-90 transition-all"
+                          onClick={() => setShowReviewForm(true)}
+                        >
+                          WRITE A REVIEW
+                        </button>
+                      ) : isAuthenticated() ? null : (
+                        <button
+                          className="px-6 py-3 bg-[#0c0b45] text-white rounded text-sm font-medium hover:bg-opacity-90 transition-all"
+                          onClick={() =>
+                            navigate("/login", {
+                              state: { from: `/product/${id}` },
+                            })
+                          }
+                        >
+                          Sign In to Review
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {/* Pagination - Simplified */}
-                {product.reviews && product.reviews.length > 4 && (
-                  <div className="p-4 border-t border-gray-200 flex justify-center">
-                    <div className="flex space-x-1">
-                      <button className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded text-sm hover:bg-gray-50">
-                        &lt;
-                      </button>
-                      <button className="w-8 h-8 flex items-center justify-center bg-[#0c0b45] text-white rounded text-sm">
-                        1
-                      </button>
-                      <button className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded text-sm hover:bg-gray-50">
-                        2
-                      </button>
-                      <button className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded text-sm hover:bg-gray-50">
-                        &gt;
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </section>
@@ -916,6 +1337,79 @@ const ProductDetail = () => {
                           product.compareAtPrice) *
                           100
                       )}
+                      onAddToCart={async () => {
+                        if (!isAuthenticated()) {
+                          toast.info("Please sign in to add items to cart");
+                          navigate("/login", {
+                            state: { from: `/product/${id}` },
+                          });
+                          return;
+                        }
+                        try {
+                          const response = await api.post(API.CART.ADD_ITEM, {
+                            productId: product._id,
+                            quantity: 1,
+                          });
+                          if (response.data.success) {
+                            await fetchAndSyncCart(dispatch);
+                            toast.success("Item added to cart successfully");
+                          }
+                        } catch (error) {
+                          if (error.response?.status === 401) {
+                            toast.info("Please sign in to add items to cart");
+                            navigate("/login", {
+                              state: { from: `/product/${id}` },
+                            });
+                          } else {
+                            toast.error(handleApiError(error));
+                          }
+                        }
+                      }}
+                      onAddToWishlist={async () => {
+                        if (!isAuthenticated()) {
+                          toast.info("Please sign in to manage wishlist");
+                          navigate("/login", {
+                            state: { from: `/product/${id}` },
+                          });
+                          return;
+                        }
+                        try {
+                          const isProductWishlisted = wishlistedProducts.has(
+                            product._id
+                          );
+                          const endpoint = isProductWishlisted
+                            ? API.WISHLIST.REMOVE
+                            : API.WISHLIST.ADD;
+                          await api.post(endpoint, { productId: product._id });
+
+                          // Update local wishlist state
+                          setWishlistedProducts((prev) => {
+                            const newSet = new Set(prev);
+                            if (isProductWishlisted) {
+                              newSet.delete(product._id);
+                            } else {
+                              newSet.add(product._id);
+                            }
+                            return newSet;
+                          });
+
+                          toast.success(
+                            isProductWishlisted
+                              ? "Removed from wishlist"
+                              : "Added to wishlist"
+                          );
+                        } catch (error) {
+                          if (error.response?.status === 401) {
+                            toast.info("Please sign in to manage wishlist");
+                            navigate("/login", {
+                              state: { from: `/product/${id}` },
+                            });
+                          } else {
+                            toast.error(handleApiError(error));
+                          }
+                        }
+                      }}
+                      isWishlisted={wishlistedProducts.has(product._id)}
                     />
                   ))}
             </div>

@@ -1,319 +1,856 @@
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { FaStar, FaRegStar } from "react-icons/fa";
-import { API } from "../config/api";
-
-// Utility function to get CSRF token from cookies or localStorage
-function getCSRFToken() {
-  if (typeof document === "undefined") return null;
-  let token = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("XSRF-TOKEN="))
-    ?.split("=")[1];
-  if (!token) {
-    token = localStorage.getItem("XSRF-TOKEN");
-  }
-  return token;
-}
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import {
+  FaFilter,
+  FaTimes,
+  FaStar,
+  FaShoppingCart,
+  FaChevronUp,
+  FaChevronDown,
+} from "react-icons/fa";
+import { BsHeart, BsHeartFill } from "react-icons/bs";
+import { toast } from "react-hot-toast";
+import { API, handleApiError } from "../config/api";
+import api from "../services/apiService";
+import { useAuth } from "../context/AuthContext";
+import { useDispatch } from "react-redux";
+import { setCartItems, setCartCount } from "../redux/slices/cartSlice";
+import { extractCartData, fetchAndSyncCart } from "../utils/cartUtils";
+import ProductCard from "../components/ProductCard";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { Link } from "react-router-dom";
 
 const Products = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const dispatch = useDispatch();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [filters, setFilters] = useState({
-    page: searchParams.get("page") || 1,
-    limit: searchParams.get("limit") || 10,
-    category: searchParams.get("category") || "",
-    subCategories: searchParams.get("subCategories") || "",
-    sortBy: searchParams.get("sortBy") || "createdAt",
-    order: searchParams.get("order") || "desc",
-    search: searchParams.get("search") || "",
-    ratings: searchParams.get("ratings") || "",
-    lotSizeMin: searchParams.get("lotSizeMin") || "",
-    lotSizeMax: searchParams.get("lotSizeMax") || "",
-    minPrice: searchParams.get("minPrice") || "",
-    maxPrice: searchParams.get("maxPrice") || "",
-    brands: searchParams.get("brands") || "",
-    status: searchParams.get("status") || "",
+  const [totalPages, setTotalPages] = useState(1);
+  const [wishlistItems, setWishlistItems] = useState(new Set());
+  const [actionLoading, setActionLoading] = useState({
+    cart: false,
+    wishlist: false,
+  });
+  const [loadingProductId, setLoadingProductId] = useState(null);
+  const [expandedFilters, setExpandedFilters] = useState({
+    price: true,
+    brands: true,
+    ratings: true,
+    lotSize: true,
+  });
+  const [priceRange, setPriceRange] = useState({
+    min: searchParams.get("minPrice") || 0,
+    max: searchParams.get("maxPrice") || 50000,
+  });
+  const [selectedBrands, setSelectedBrands] = useState(
+    searchParams.get("brands")?.split(",") || []
+  );
+  const [selectedRating, setSelectedRating] = useState(
+    searchParams.get("rating") || ""
+  );
+  const [selectedLotSize, setSelectedLotSize] = useState(
+    searchParams.get("lotSize") || ""
+  );
+  const [sortBy, setSortBy] = useState(searchParams.get("sortBy") || "newest");
+  const priceSliderRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(null);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  // Add state for tracking active filters
+  const [activeFilters, setActiveFilters] = useState({
+    price: null,
+    brands: [],
+    ratings: null,
+    lotSize: null,
   });
 
+  // Update active filters when filters change
+  useEffect(() => {
+    const newActiveFilters = {
+      price:
+        priceRange.min > 0 || priceRange.max < 50000
+          ? `₹${priceRange.min.toLocaleString(
+              "en-IN"
+            )} - ₹${priceRange.max.toLocaleString("en-IN")}`
+          : null,
+      brands: selectedBrands,
+      ratings: selectedRating,
+      lotSize: selectedLotSize,
+    };
+    setActiveFilters(newActiveFilters);
+  }, [priceRange, selectedBrands, selectedRating, selectedLotSize]);
+
+  // Fetch initial wishlist data only if user is authenticated
+  useEffect(() => {
+    const fetchWishlist = async () => {
+      if (!isAuthenticated()) return; // Don't fetch if not authenticated
+
+      try {
+        const response = await api.get(API.WISHLIST.ALL);
+        const wishlistProductIds = new Set(
+          response.data.wishlist.map((item) => item.productId._id)
+        );
+        setWishlistItems(wishlistProductIds);
+      } catch (error) {
+        // Only log non-401 errors
+        if (error.response?.status !== 401) {
+          console.error("Error fetching wishlist:", error);
+        }
+      }
+    };
+
+    fetchWishlist();
+  }, [isAuthenticated]);
+
+  const handleAddToCart = async (productId) => {
+    if (actionLoading.cart) return;
+
+    try {
+      setActionLoading((prev) => ({ ...prev, cart: true }));
+      setLoadingProductId(productId);
+      const response = await api.post(
+        API.CART.ADD_ITEM,
+        { productId, quantity: 1 },
+        { withCredentials: true }
+      );
+
+      if (response.status === 401) {
+        toast.info("Please sign in to add items to cart");
+        navigate("/login", { state: { from: window.location.pathname } });
+        return;
+      }
+
+      if (response.data && response.data.success && response.data.data) {
+        await fetchAndSyncCart(dispatch);
+        toast.success(response.data.message);
+      } else {
+        toast.error(response.data?.message || "Failed to add item to cart");
+      }
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      if (error.response?.status === 401) {
+        toast.info("Please sign in to add items to cart");
+        navigate("/login", { state: { from: window.location.pathname } });
+      } else {
+        toast.error(handleApiError(error));
+      }
+    } finally {
+      setActionLoading((prev) => ({ ...prev, cart: false }));
+      setLoadingProductId(null);
+    }
+  };
+
+  const handleWishlist = async (productId) => {
+    if (actionLoading.wishlist) return;
+
+    try {
+      setActionLoading((prev) => ({ ...prev, wishlist: true }));
+      const isWishlisted = wishlistItems.has(productId);
+      const endpoint = isWishlisted ? API.WISHLIST.REMOVE : API.WISHLIST.ADD;
+
+      const response = await api.post(endpoint, { productId });
+
+      if (response.status === 401) {
+        toast.info("Please sign in to manage wishlist");
+        navigate("/login", { state: { from: window.location.pathname } });
+        return;
+      }
+
+      setWishlistItems((prev) => {
+        const newSet = new Set(prev);
+        if (isWishlisted) {
+          newSet.delete(productId);
+          toast.success("Removed from wishlist");
+        } else {
+          newSet.add(productId);
+          toast.success("Added to wishlist");
+        }
+        return newSet;
+      });
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      if (error.response?.status === 401) {
+        toast.info("Please sign in to manage wishlist");
+        navigate("/login", { state: { from: window.location.pathname } });
+      } else {
+        toast.error(handleApiError(error));
+      }
+    } finally {
+      setActionLoading((prev) => ({ ...prev, wishlist: false }));
+    }
+  };
+
+  // Function to remove a filter
+  const removeFilter = (filterType, value = null) => {
+    switch (filterType) {
+      case "price":
+        setPriceRange({ min: 0, max: 50000 });
+        handleFilterChange("price", { min: 0, max: 50000 });
+        break;
+      case "brands":
+        const newBrands = selectedBrands.filter((brand) => brand !== value);
+        setSelectedBrands(newBrands);
+        handleFilterChange("brands", newBrands);
+        break;
+      case "ratings":
+        setSelectedRating(null);
+        handleFilterChange("rating", null);
+        break;
+      case "lotSize":
+        setSelectedLotSize(null);
+        handleFilterChange("lotSize", null);
+        break;
+    }
+  };
+
+  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        setError(null);
-        const queryParams = new URLSearchParams(filters).toString();
-        const token = getCSRFToken();
-        const response = await fetch(`${API.PRODUCTS.ALL}?${queryParams}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            ...(token && { "X-CSRF-Token": token }),
-          },
-          credentials: "include", // Include cookies if needed
+        const params = new URLSearchParams({
+          page: currentPage,
+          limit: 12,
+          ...(searchParams.get("category") && {
+            category: searchParams.get("category"),
+          }),
+          ...(searchParams.get("subCategories") && {
+            subCategories: searchParams.get("subCategories"),
+          }),
+          ...(searchParams.get("sortBy") && {
+            sortBy: searchParams.get("sortBy"),
+          }),
+          ...(searchParams.get("order") && {
+            order: searchParams.get("order"),
+          }),
+          ...(priceRange.min && { minPrice: priceRange.min }),
+          ...(priceRange.max && { maxPrice: priceRange.max }),
+          ...(selectedBrands.length > 0 && {
+            brands: selectedBrands.join(","),
+          }),
+          ...(selectedRating && { ratings: selectedRating }),
+          ...(selectedLotSize && {
+            ...(selectedLotSize.endsWith("+")
+              ? { lotSizeMin: selectedLotSize.replace("+", "") }
+              : selectedLotSize.includes("-")
+              ? (() => {
+                  const [min, max] = selectedLotSize.split("-");
+                  return { lotSizeMin: min, lotSizeMax: max };
+                })()
+              : { lotSize: selectedLotSize }),
+          }),
         });
 
-        console.log(response);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await api.get(`${API.PRODUCTS.ALL}?${params}`, {
+          withCredentials: true,
+        });
 
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          throw new TypeError("Oops, we haven't got JSON!");
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-          setProducts(data.products);
-          setTotalPages(data.totalPages);
-          setCurrentPage(data.currentPage);
+        if (response.data && response.data.products) {
+          setProducts(response.data.products);
+          setTotalProducts(
+            response.data.totalProducts || response.data.products.length
+          );
+          setTotalPages(
+            response.data.totalPages ||
+              Math.ceil(response.data.products.length / 12)
+          );
         } else {
-          throw new Error(data.message || "Failed to fetch products");
+          setProducts([]);
+          setTotalProducts(0);
+          setTotalPages(0);
         }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setError(error.message);
-        setProducts([]);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError(err.response?.data?.message || "Error fetching products");
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, [filters]);
+  }, [
+    currentPage,
+    searchParams,
+    priceRange,
+    selectedBrands,
+    selectedRating,
+    selectedLotSize,
+  ]);
 
-  const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value, page: 1 };
-    setFilters(newFilters);
-    setSearchParams(newFilters);
+  const handleFilterChange = (type, value) => {
+    switch (type) {
+      case "price":
+        setPriceRange(value);
+        break;
+      case "brands":
+        setSelectedBrands(value);
+        break;
+      case "rating":
+        setSelectedRating(value);
+        break;
+      case "lotSize":
+        setSelectedLotSize(value);
+        break;
+      case "sort":
+        setSortBy(value);
+        break;
+    }
+    setCurrentPage(1);
   };
 
-  const handlePageChange = (page) => {
-    handleFilterChange("page", page);
+  const toggleFilter = (filter) => {
+    setExpandedFilters((prev) => ({
+      ...prev,
+      [filter]: !prev[filter],
+    }));
   };
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            <p className="font-medium">Error loading products</p>
-            <p className="text-sm">{error}</p>
+  // Handle price slider mouse events
+  const handlePriceSliderMouseDown = (e, type) => {
+    e.preventDefault();
+    setIsDragging(type);
+  };
+
+  const handlePriceSliderMouseMove = (e) => {
+    if (!isDragging || !priceSliderRef.current) return;
+
+    const slider = priceSliderRef.current;
+    const rect = slider.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percentage = x / rect.width;
+    const newValue = Math.round(percentage * 50000);
+
+    if (isDragging === "min") {
+      const newMin = Math.min(newValue, priceRange.max - 500);
+      setPriceRange((prev) => ({ ...prev, min: newMin }));
+    } else {
+      const newMax = Math.max(newValue, priceRange.min + 500);
+      setPriceRange((prev) => ({ ...prev, max: newMax }));
+    }
+  };
+
+  const handlePriceSliderMouseUp = () => {
+    if (isDragging) {
+      handleFilterChange("price", priceRange);
+    }
+    setIsDragging(null);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handlePriceSliderMouseMove);
+      document.addEventListener("mouseup", handlePriceSliderMouseUp);
+    }
+    return () => {
+      document.removeEventListener("mousemove", handlePriceSliderMouseMove);
+      document.removeEventListener("mouseup", handlePriceSliderMouseUp);
+    };
+  }, [isDragging, priceRange]);
+
+  // Lot size options for range filtering
+  const lotSizeOptions = [
+    { value: "1-10", label: "1 to 10" },
+    { value: "10-20", label: "10 to 20" },
+    { value: "20-30", label: "20 to 30" },
+    { value: "30+", label: "30+" },
+  ];
+
+  const handleLotSizeChange = (value) => {
+    let min = null,
+      max = null;
+    if (value.endsWith("+")) {
+      min = value.replace("+", "");
+    } else {
+      [min, max] = value.split("-");
+    }
+    const params = new URLSearchParams(searchParams);
+    if (min) params.set("lotSizeMin", min);
+    else params.delete("lotSizeMin");
+    if (max) params.set("lotSizeMax", max);
+    else params.delete("lotSizeMax");
+    setSearchParams(params);
+    setSelectedLotSize(value);
+  };
+
+  // Hide sort bar
+  const showSortBar = false;
+
+  // Mobile filter modal content (reuse filter controls)
+  const FilterControls = (
+    <>
+      {/* Selected Filters */}
+      {(activeFilters.price ||
+        activeFilters.brands.length > 0 ||
+        activeFilters.ratings ||
+        activeFilters.lotSize) && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">
+            Selected Filters
+          </h3>
+          <div className="space-y-2">
+            {activeFilters.price && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
+                <span className="text-sm text-gray-600">
+                  Price: {activeFilters.price}
+                </span>
+                <button
+                  onClick={() => removeFilter("price")}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {activeFilters.brands.map((brand) => (
+              <div
+                key={brand}
+                className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5"
+              >
+                <span className="text-sm text-gray-600">Brand: {brand}</span>
+                <button
+                  onClick={() => removeFilter("brands", brand)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            {activeFilters.ratings && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
+                <span className="text-sm text-gray-600">
+                  Rating: {activeFilters.ratings}★ & Up
+                </span>
+                <button
+                  onClick={() => removeFilter("ratings")}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {activeFilters.lotSize && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-1.5">
+                <span className="text-sm text-gray-600">
+                  Lot Size: {activeFilters.lotSize}
+                </span>
+                <button
+                  onClick={() => removeFilter("lotSize")}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FaTimes className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
+          <button
+            onClick={() => {
+              setPriceRange({ min: 0, max: 50000 });
+              setSelectedBrands([]);
+              setSelectedRating(null);
+              setSelectedLotSize(null);
+              handleFilterChange("price", { min: 0, max: 50000 });
+              handleFilterChange("brands", []);
+              handleFilterChange("rating", null);
+              handleFilterChange("lotSize", null);
+            }}
+            className="mt-3 text-sm text-[#0D0B46] hover:text-[#23206a] font-medium"
+          >
+            Clear All Filters
+          </button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Filters Sidebar */}
-          <div className="w-full md:w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Filters
-              </h2>
+      {/* Price Range Filter */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <FaFilter className="text-[#0D0B46]" />
+            Filters
+          </h2>
+        </div>
 
-              {/* Search */}
-              <div className="mb-6">
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#0D0B46] focus:ring-[#0D0B46]"
-                />
-              </div>
+        <div className="border-b border-gray-200">
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("price")}
+          >
+            <span>Price Range</span>
+            {expandedFilters.price ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.price && (
+            <div className="px-4 pb-4">
+              <div className="space-y-6">
+                {/* Price Range Slider */}
+                <div className="relative pt-6">
+                  <div
+                    ref={priceSliderRef}
+                    className="relative h-1 bg-gray-200 rounded-full cursor-pointer"
+                  >
+                    {/* Track */}
+                    <div
+                      className="absolute h-full bg-[#0D0B46] rounded-full"
+                      style={{
+                        left: `${(priceRange.min / 50000) * 100}%`,
+                        right: `${100 - (priceRange.max / 50000) * 100}%`,
+                      }}
+                    />
 
-              {/* Price Range */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">
-                  Price Range
-                </h3>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.minPrice}
-                    onChange={(e) =>
-                      handleFilterChange("minPrice", e.target.value)
-                    }
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#0D0B46] focus:ring-[#0D0B46]"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.maxPrice}
-                    onChange={(e) =>
-                      handleFilterChange("maxPrice", e.target.value)
-                    }
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#0D0B46] focus:ring-[#0D0B46]"
-                  />
+                    {/* Min Thumb */}
+                    <div
+                      className="absolute w-4 h-4 bg-white border-2 border-[#0D0B46] rounded-full -top-1.5 cursor-pointer hover:scale-110 transition-transform"
+                      style={{
+                        left: `${(priceRange.min / 50000) * 100}%`,
+                      }}
+                      onMouseDown={(e) => handlePriceSliderMouseDown(e, "min")}
+                    />
+
+                    {/* Max Thumb */}
+                    <div
+                      className="absolute w-4 h-4 bg-white border-2 border-[#0D0B46] rounded-full -top-1.5 cursor-pointer hover:scale-110 transition-transform"
+                      style={{
+                        left: `${(priceRange.max / 50000) * 100}%`,
+                      }}
+                      onMouseDown={(e) => handlePriceSliderMouseDown(e, "max")}
+                    />
+                  </div>
+
+                  {/* Price Points */}
+                  <div className="absolute -bottom-6 left-0 right-0 flex justify-between">
+                    <div className="text-xs text-gray-500">
+                      ₹{priceRange.min.toLocaleString("en-IN")}
+                    </div>
+                    <div className="flex-1 flex justify-center items-center">
+                      <div className="flex justify-between w-full px-4">
+                        {[...Array(5)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-1.5 h-1.5 rounded-full bg-gray-300"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      ₹{priceRange.max.toLocaleString("en-IN")}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Lot Size Range */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">
-                  Lot Size
-                </h3>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.lotSizeMin}
-                    onChange={(e) =>
-                      handleFilterChange("lotSizeMin", e.target.value)
-                    }
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#0D0B46] focus:ring-[#0D0B46]"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.lotSizeMax}
-                    onChange={(e) =>
-                      handleFilterChange("lotSizeMax", e.target.value)
-                    }
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#0D0B46] focus:ring-[#0D0B46]"
-                  />
+                {/* Price Inputs */}
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <label className="block text-sm text-gray-600 mb-1">
+                      Min Price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        value={priceRange.min}
+                        onChange={(e) => {
+                          const value = Math.min(
+                            Number(e.target.value),
+                            priceRange.max - 500
+                          );
+                          setPriceRange((prev) => ({
+                            ...prev,
+                            min: value,
+                          }));
+                          handleFilterChange("price", {
+                            ...priceRange,
+                            min: value,
+                          });
+                        }}
+                        className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
+                        min="0"
+                        max={priceRange.max - 500}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm text-gray-600 mb-1">
+                      Max Price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        value={priceRange.max}
+                        onChange={(e) => {
+                          const value = Math.max(
+                            Number(e.target.value),
+                            priceRange.min + 500
+                          );
+                          setPriceRange((prev) => ({
+                            ...prev,
+                            max: value,
+                          }));
+                          handleFilterChange("price", {
+                            ...priceRange,
+                            max: value,
+                          });
+                        }}
+                        className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
+                        min={priceRange.min + 500}
+                        max="50000"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* Status */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">
-                  Status
-                </h3>
-                <select
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange("status", e.target.value)}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#0D0B46] focus:ring-[#0D0B46]"
-                >
-                  <option value="">All</option>
-                  <option value="Active">Active</option>
-                  <option value="Low Stock">Low Stock</option>
-                  <option value="Out of Stock">Out of Stock</option>
-                </select>
-              </div>
-
-              {/* Sort By */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">
-                  Sort By
-                </h3>
-                <select
-                  value={`${filters.sortBy}-${filters.order}`}
-                  onChange={(e) => {
-                    const [sortBy, order] = e.target.value.split("-");
-                    handleFilterChange("sortBy", sortBy);
-                    handleFilterChange("order", order);
-                  }}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-[#0D0B46] focus:ring-[#0D0B46]"
-                >
-                  <option value="createdAt-desc">Newest</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                  <option value="ratings-desc">Highest Rated</option>
-                  <option value="lotSize-desc">Largest Lot Size</option>
-                </select>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Brands Filter */}
+        <div className="border-b border-gray-200">
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("brands")}
+          >
+            <span>Brands</span>
+            {expandedFilters.brands ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.brands && (
+            <div className="px-4 pb-4 space-y-2">
+              {["Apple", "Samsung", "Sony", "LG", "Bose"].map((brand) => (
+                <label key={brand} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={(e) => {
+                      const newBrands = e.target.checked
+                        ? [...selectedBrands, brand]
+                        : selectedBrands.filter((b) => b !== brand);
+                      handleFilterChange("brands", newBrands);
+                    }}
+                    className="rounded text-[#0D0B46] focus:ring-[#0D0B46]"
+                  />
+                  <span className="text-sm">{brand}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Lot Size Filter */}
+        <div className="border-b border-gray-200">
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("lotSize")}
+          >
+            <span>Lot Size</span>
+            {expandedFilters.lotSize ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.lotSize && (
+            <div className="px-4 pb-4 space-y-2">
+              {lotSizeOptions.map((option) => (
+                <label key={option.value} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="lotSize"
+                    checked={selectedLotSize === option.value}
+                    onChange={() => handleLotSizeChange(option.value)}
+                    value={option.value}
+                    className="text-[#0D0B46] focus:ring-[#0D0B46]"
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ratings Filter */}
+        <div>
+          <button
+            className="w-full flex items-center justify-between p-4 text-gray-700 font-medium hover:bg-gray-50"
+            onClick={() => toggleFilter("ratings")}
+          >
+            <span>Ratings</span>
+            {expandedFilters.ratings ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+          {expandedFilters.ratings && (
+            <div className="px-4 pb-4 space-y-2">
+              {[4, 3, 2, 1].map((rating) => (
+                <label key={rating} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="rating"
+                    checked={selectedRating === rating.toString()}
+                    onChange={(e) =>
+                      handleFilterChange("rating", e.target.value)
+                    }
+                    value={rating}
+                    className="text-[#0D0B46] focus:ring-[#0D0B46]"
+                  />
+                  <span className="text-sm">{rating}★ & Up</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Products Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-[95%] sm:max-w-[90%] md:max-w-[85%] lg:max-w-6xl 2xl:max-w-7xl mx-auto px-2 sm:px-4 py-4">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0D0B46]">
+            All Products
+          </h1>
+          <p className="text-gray-600 mt-1">{totalProducts} products found</p>
+        </div>
+      </div>
+
+      <div className="max-w-[95%] sm:max-w-[90%] md:max-w-[85%] lg:max-w-6xl 2xl:max-w-7xl mx-auto px-2 sm:px-4 py-6">
+        {/* Sort Controls */}
+        {showSortBar && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+            <div className="flex items-center gap-2 mb-2 md:mb-0">
+              <FaFilter className="text-[#0D0B46]" />
+              <span className="text-gray-700 font-medium">Sort by:</span>
+            </div>
+            {/* Mobile: horizontal scrollable sort bar */}
+            <div className="flex gap-2 overflow-x-auto md:overflow-visible scrollbar-hide">
+              {[
+                { value: "newest", label: "Newest" },
+                { value: "price_low", label: "Price: Low to High" },
+                { value: "price_high", label: "Price: High to Low" },
+                { value: "rating", label: "Rating" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleFilterChange("sort", option.value)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium whitespace-nowrap transition-colors border border-transparent ${
+                    sortBy === option.value
+                      ? "bg-[#0D0B46] text-white border-[#0D0B46] shadow"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-6">
+          {/* Filters Sidebar (Desktop) */}
+          <div className="hidden lg:block w-64 flex-shrink-0">
+            <div className="sticky top-24 space-y-4">{FilterControls}</div>
           </div>
 
           {/* Products Grid */}
           <div className="flex-1">
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, index) => (
-                  <div key={index} className="animate-pulse">
-                    <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {products.map((product) => (
-                    <div
-                      key={product._id}
-                      className="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105"
+            {/* Mobile Filter Button */}
+            <button
+              className="md:hidden w-full mb-4 flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg p-3 text-gray-700 font-medium hover:bg-gray-50"
+              onClick={() => setIsMobileFilterOpen(true)}
+            >
+              <FaFilter className="text-[#0D0B46]" />
+              Filters
+            </button>
+
+            {/* Mobile Filter Modal */}
+            {isMobileFilterOpen && (
+              <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black bg-opacity-40 lg:hidden">
+                <div className="w-full max-w-md bg-white rounded-t-2xl shadow-lg p-0 animate-slideUp relative">
+                  {/* Sticky header with close button */}
+                  <div className="sticky top-0 z-10 bg-white px-6 pt-6 pb-2 flex justify-between items-center border-b border-gray-200 rounded-t-2xl">
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      Filters
+                    </h2>
+                    <button
+                      className="text-gray-400 hover:text-gray-700 text-2xl"
+                      onClick={() => setIsMobileFilterOpen(false)}
                     >
-                      <div className="aspect-w-1 aspect-h-1">
-                        <img
-                          src={product.featuredImage}
-                          alt={product.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          {product.title}
-                        </h3>
-                        <div className="flex items-center mb-2">
-                          <div className="flex text-yellow-400">
-                            {[...Array(5)].map((_, index) => (
-                              <span key={index}>
-                                {index < Math.floor(product.ratings) ? (
-                                  <FaStar className="w-4 h-4" />
-                                ) : (
-                                  <FaRegStar className="w-4 h-4" />
-                                )}
-                              </span>
-                            ))}
-                          </div>
-                          <span className="ml-2 text-sm text-gray-600">
-                            ({product.reviewsCount})
-                          </span>
-                        </div>
-                        <p className="text-[#0D0B46] font-bold mb-2">
-                          ${product.price}
-                        </p>
-                        {product.compareAtPrice && (
-                          <p className="text-gray-500 line-through text-sm">
-                            ${product.compareAtPrice}
-                          </p>
-                        )}
-                        <div className="mt-2 text-sm text-gray-600">
-                          <p>Lot Size: {product.lotSize}</p>
-                          <p>Available: {product.quantityAvailable}</p>
-                        </div>
-                        <button className="w-full mt-4 bg-[#0D0B46] text-white py-2 rounded-md hover:bg-[#23206a] transition-colors">
-                          Add to Cart
-                        </button>
-                      </div>
-                    </div>
+                      <FaTimes />
+                    </button>
+                  </div>
+                  {/* Scrollable filter content */}
+                  <div className="overflow-y-auto max-h-[70vh] px-6 pb-4">
+                    {FilterControls}
+                  </div>
+                  <button
+                    className="w-full mt-4 py-3 bg-[#0D0B46] text-white rounded-lg font-semibold text-lg hover:bg-[#23206a] transition"
+                    onClick={() => setIsMobileFilterOpen(false)}
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <LoadingSpinner />
+            ) : error ? (
+              <div className="text-red-500 text-center">{error}</div>
+            ) : products.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {products.map((product) => (
+                    <ProductCard
+                      key={product._id}
+                      id={product._id}
+                      image={product.featuredImage}
+                      title={product.title}
+                      price={product.price}
+                      originalPrice={product.compareAtPrice}
+                      rating={product.ratings || 0}
+                      lotSize={product.lotSize}
+                      isWishlisted={wishlistItems.has(product._id)}
+                      onAddToCart={() => handleAddToCart(product._id)}
+                      onAddToWishlist={() => handleWishlist(product._id)}
+                      isLoading={
+                        actionLoading.cart && loadingProductId === product._id
+                      }
+                    />
                   ))}
                 </div>
 
                 {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="mt-8 flex justify-center gap-2">
-                    {[...Array(totalPages)].map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handlePageChange(index + 1)}
-                        className={`px-4 py-2 rounded-md ${
-                          currentPage === index + 1
-                            ? "bg-[#0D0B46] text-white"
-                            : "bg-white text-gray-700 hover:bg-gray-50"
-                        }`}
-                      >
-                        {index + 1}
-                      </button>
-                    ))}
+                    <button
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                      }
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 border rounded-md disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-4 py-2">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 border rounded-md disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                    >
+                      Next
+                    </button>
                   </div>
                 )}
               </>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                No products found matching your criteria.
+              </div>
             )}
           </div>
         </div>

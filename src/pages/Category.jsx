@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useCategories } from "../hooks/useCategories";
 import api from "../services/apiService";
@@ -8,11 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import ProductCard from "../components/ProductCard";
 import { toast } from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import {
-  addToCart,
-  setCartCount,
-  setCartItems,
-} from "../redux/slices/cartSlice";
+import { setCartItems, setCartCount } from "../redux/slices/cartSlice";
 import { handleApiError } from "../config/api";
 import {
   FaFilter,
@@ -21,6 +17,7 @@ import {
   FaSort,
   FaTimes,
 } from "react-icons/fa";
+import { extractCartData, fetchAndSyncCart } from "../utils/cartUtils";
 
 const Category = () => {
   const { categoryName, subCategoryName } = useParams();
@@ -138,12 +135,8 @@ const Category = () => {
       }
 
       if (response.data && response.data.success && response.data.data) {
-        const cartData = response.data.data;
-        if (cartData.items && Array.isArray(cartData.items)) {
-          dispatch(setCartItems(cartData.items));
-          dispatch(setCartCount(cartData.items.length));
-          toast.success(response.data.message);
-        }
+        await fetchAndSyncCart(dispatch);
+        toast.success(response.data.message);
       } else {
         toast.error(response.data?.message || "Failed to add item to cart");
       }
@@ -292,12 +285,20 @@ const Category = () => {
 
         // Add rating if selected
         if (selectedRating) {
-          paramsObj.rating = selectedRating;
+          paramsObj.ratings = selectedRating;
         }
 
         // Add lot size if selected
         if (selectedLotSize) {
-          paramsObj.lotSize = selectedLotSize;
+          if (selectedLotSize.endsWith("+")) {
+            paramsObj.lotSizeMin = selectedLotSize.replace("+", "");
+          } else if (selectedLotSize.includes("-")) {
+            const [min, max] = selectedLotSize.split("-");
+            paramsObj.lotSizeMin = min;
+            paramsObj.lotSizeMax = max;
+          } else {
+            paramsObj.lotSize = selectedLotSize;
+          }
         }
 
         const params = new URLSearchParams(paramsObj);
@@ -349,6 +350,31 @@ const Category = () => {
         break;
     }
     setCurrentPage(1);
+  };
+
+  // Lot size options for range filtering
+  const lotSizeOptions = [
+    { value: "1-10", label: "1 to 10" },
+    { value: "10-20", label: "10 to 20" },
+    { value: "20-30", label: "20 to 30" },
+    { value: "30+", label: "30+" },
+  ];
+
+  const handleLotSizeChange = (value) => {
+    let min = null,
+      max = null;
+    if (value.endsWith("+")) {
+      min = value.replace("+", "");
+    } else {
+      [min, max] = value.split("-");
+    }
+    const params = new URLSearchParams(searchParams);
+    if (min) params.set("lotSizeMin", min);
+    else params.delete("lotSizeMin");
+    if (max) params.set("lotSizeMax", max);
+    else params.delete("lotSizeMax");
+    setSearchParams(params);
+    setSelectedLotSize(value);
   };
 
   const toggleFilter = (filter) => {
@@ -669,20 +695,13 @@ const Category = () => {
           </button>
           {expandedFilters.lotSize && (
             <div className="px-4 pb-4 space-y-2">
-              {[
-                { value: "1", label: "Single Item" },
-                { value: "2-5", label: "2-5 Items" },
-                { value: "6-10", label: "6-10 Items" },
-                { value: "10+", label: "10+ Items" },
-              ].map((option) => (
+              {lotSizeOptions.map((option) => (
                 <label key={option.value} className="flex items-center gap-2">
                   <input
                     type="radio"
                     name="lotSize"
                     checked={selectedLotSize === option.value}
-                    onChange={(e) =>
-                      handleFilterChange("lotSize", e.target.value)
-                    }
+                    onChange={() => handleLotSizeChange(option.value)}
                     value={option.value}
                     className="text-[#0D0B46] focus:ring-[#0D0B46]"
                   />

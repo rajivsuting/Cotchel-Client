@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { FaTrash, FaArrowLeft, FaShoppingCart } from "react-icons/fa";
 import { API, handleApiError } from "../config/api";
 import api from "../services/apiService";
 import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { setCartCount } from "../redux/slices/cartSlice";
+import { extractCartData } from "../utils/cartUtils";
 import {
   setWishlistItems,
   setLoading,
@@ -79,9 +80,8 @@ const Wishlist = () => {
         // Fetch updated cart to get the new count
         const cartResponse = await api.get(API.CART.GET);
 
-        if (cartResponse.data.data && cartResponse.data.data.items) {
-          dispatch(setCartCount(cartResponse.data.data.items.length));
-        }
+        const { count } = extractCartData(cartResponse);
+        dispatch(setCartCount(count));
         toast.success("Item added to cart successfully");
       }
     } catch (error) {

@@ -149,7 +149,7 @@ const CustomerSupport = () => {
   const fetchInquiries = async () => {
     setListLoading(true);
     setListError(null);
-    const res = await apiGet(API.INQUIRY.ALL);
+    const res = await apiGet(API.INQUIRY.USER);
     if (res.success && Array.isArray(res.data.data?.inquiries)) {
       setInquiries(res.data.data.inquiries);
     } else {

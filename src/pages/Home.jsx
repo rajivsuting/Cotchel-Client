@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
@@ -9,23 +9,14 @@ import ProductCard from "../components/ProductCard";
 import LoadingState from "../components/LoadingState";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { toast } from "react-hot-toast";
-import { fetchWithCache, invalidateCache } from "../utils/cache";
 import { API, handleApiError } from "../config/api";
 import api from "../services/apiService";
 import { useAuth } from "../context/AuthContext";
 import { useDispatch } from "react-redux";
-import {
-  addToCart,
-  setCartCount,
-  setCartItems,
-} from "../redux/slices/cartSlice";
-import { FaShippingFast, FaUndo, FaShieldAlt, FaHeadset } from "react-icons/fa";
+import { setCartCount, setCartItems } from "../redux/slices/cartSlice";
+import { extractCartData } from "../utils/cartUtils";
 
-// Cache configuration
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-
+// Memoized features array to prevent re-creation
 const features = [
   {
     icon: <FiPackage className="w-8 h-8" />,
@@ -49,6 +40,7 @@ const features = [
   },
 ];
 
+// Memoized skeleton components
 const BannerSkeleton = () => (
   <div className="h-[200px] sm:h-[300px] md:h-[400px] bg-gray-200 animate-pulse rounded-lg"></div>
 );
@@ -68,6 +60,15 @@ const ProductSkeleton = () => (
   </div>
 );
 
+// Memoized product skeletons
+const ProductSkeletons = () => (
+  <>
+    {Array.from({ length: 20 }, (_, index) => (
+      <ProductSkeleton key={index} />
+    ))}
+  </>
+);
+
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [banners, setBanners] = useState([]);
@@ -80,14 +81,16 @@ const Home = () => {
     wishlist: false,
   });
   const [loadingProductId, setLoadingProductId] = useState(null);
-  const abortControllerRef = useRef(null);
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const dispatch = useDispatch();
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState(null);
 
+  const abortControllerRef = useRef(null);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const dispatch = useDispatch();
+
+  // Memoized fetch data function
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -108,7 +111,7 @@ const Home = () => {
             data: { data: [] },
           })),
         api
-          .get(API.PRODUCTS.ALL + "?limit=8&sortBy=createdAt&order=desc", {
+          .get(API.PRODUCTS.ALL + "?limit=20&sortBy=createdAt&order=desc", {
             signal: abortControllerRef.current.signal,
           })
           .catch(() => ({
@@ -137,6 +140,46 @@ const Home = () => {
     }
   }, []);
 
+  // Memoized wishlist fetch
+  const fetchWishlist = useCallback(async () => {
+    if (!isAuthenticated()) return;
+
+    try {
+      const response = await api.get(API.WISHLIST.ALL);
+      const wishlistProductIds = new Set(
+        response.data.wishlist.map((item) => item.productId._id)
+      );
+      setWishlistItems(wishlistProductIds);
+    } catch (error) {
+      if (error.response?.status !== 401) {
+        console.error("Error fetching wishlist:", error);
+      }
+    }
+  }, [isAuthenticated]);
+
+  // Memoized categories fetch
+  const fetchCategories = useCallback(async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await api.get(API.CATEGORIES.ALL);
+      if (response.data.success && Array.isArray(response.data.data)) {
+        setCategories(response.data.data);
+      } else {
+        setCategories([]);
+        setCategoriesError(
+          response.data.message || "Failed to fetch categories"
+        );
+      }
+    } catch (err) {
+      setCategoriesError(
+        err.response?.data?.message || "Failed to fetch categories"
+      );
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
     return () => {
@@ -148,52 +191,15 @@ const Home = () => {
 
   // Fetch initial wishlist data only if user is authenticated
   useEffect(() => {
-    const fetchWishlist = async () => {
-      if (!isAuthenticated()) return; // Don't fetch if not authenticated
-
-      try {
-        const response = await api.get(API.WISHLIST.ALL);
-        const wishlistProductIds = new Set(
-          response.data.wishlist.map((item) => item.productId._id)
-        );
-        setWishlistItems(wishlistProductIds);
-      } catch (error) {
-        // Only log non-401 errors
-        if (error.response?.status !== 401) {
-          console.error("Error fetching wishlist:", error);
-        }
-      }
-    };
-
     fetchWishlist();
-  }, [isAuthenticated]);
+  }, [fetchWishlist]);
 
-  // Fetch categories (like Navbar)
+  // Fetch categories
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setCategoriesLoading(true);
-        const response = await api.get(API.CATEGORIES.ALL);
-        if (response.data.success && Array.isArray(response.data.data)) {
-          setCategories(response.data.data);
-        } else {
-          setCategories([]);
-          setCategoriesError(
-            response.data.message || "Failed to fetch categories"
-          );
-        }
-      } catch (err) {
-        setCategoriesError(
-          err.response?.data?.message || "Failed to fetch categories"
-        );
-        setCategories([]);
-      } finally {
-        setCategoriesLoading(false);
-      }
-    };
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
+  // Memoized add to cart handler
   const handleAddToCart = useCallback(
     async (productId) => {
       if (actionLoading.cart) return;
@@ -213,16 +219,10 @@ const Home = () => {
         }
 
         if (response.data && response.data.success && response.data.data) {
-          const cartData = response.data.data;
-          if (cartData.items && Array.isArray(cartData.items)) {
-            dispatch(setCartItems(cartData.items));
-            const totalItems = cartData.items.reduce(
-              (sum, item) => sum + (item.quantity || 0),
-              0
-            );
-            dispatch(setCartCount(totalItems));
-            toast.success(response.data.message);
-          }
+          const { items, count } = extractCartData(response);
+          dispatch(setCartItems(items));
+          dispatch(setCartCount(count));
+          toast.success(response.data.message);
         } else {
           toast.error(response.data?.message || "Failed to add item to cart");
         }
@@ -242,6 +242,7 @@ const Home = () => {
     [actionLoading.cart, navigate, dispatch]
   );
 
+  // Memoized wishlist handler
   const handleWishlist = useCallback(
     async (productId) => {
       if (actionLoading.wishlist) return;
@@ -285,12 +286,18 @@ const Home = () => {
     [actionLoading.wishlist, wishlistItems, navigate]
   );
 
-  const handleBannerImageLoad = (bannerId) => {
+  // Memoized banner image load handler
+  const handleBannerImageLoad = useCallback((bannerId) => {
     setBannerImagesLoaded((prev) => ({
       ...prev,
       [bannerId]: true,
     }));
-  };
+  }, []);
+
+  // Memoized categories for rendering
+  const renderedCategories = useMemo(() => {
+    return categories.slice(0, 6);
+  }, [categories]);
 
   if (error) {
     return (
@@ -418,7 +425,7 @@ const Home = () => {
             {/* Mobile Layout - 3 badges per row */}
             <div className="grid grid-cols-3 gap-3 md:hidden">
               {categoriesLoading ? (
-                [...Array(6)].map((_, idx) => (
+                Array.from({ length: 6 }, (_, idx) => (
                   <div
                     key={idx}
                     className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-center animate-pulse h-10"
@@ -429,7 +436,7 @@ const Home = () => {
                   {categoriesError}
                 </div>
               ) : (
-                categories.slice(0, 6).map((category) => (
+                renderedCategories.map((category) => (
                   <Link
                     key={category._id}
                     to={`/category/${category.name.toLowerCase()}`}
@@ -446,7 +453,7 @@ const Home = () => {
             {/* Desktop Layout - Original with icons */}
             <div className="hidden md:grid md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
               {categoriesLoading ? (
-                [...Array(6)].map((_, idx) => (
+                Array.from({ length: 6 }, (_, idx) => (
                   <div
                     key={idx}
                     className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 border border-gray-200 rounded-lg flex items-center justify-center animate-pulse"
@@ -457,7 +464,7 @@ const Home = () => {
                   {categoriesError}
                 </div>
               ) : (
-                categories.slice(0, 6).map((category) => (
+                renderedCategories.map((category) => (
                   <Link
                     key={category._id}
                     to={`/category/${category.name.toLowerCase()}`}
@@ -488,11 +495,7 @@ const Home = () => {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {loading ? (
-                <>
-                  {[...Array(8)].map((_, index) => (
-                    <ProductSkeleton key={index} />
-                  ))}
-                </>
+                <ProductSkeletons />
               ) : (
                 featuredProducts.map((product) => (
                   <ProductCard
@@ -500,7 +503,7 @@ const Home = () => {
                     id={product._id}
                     image={product.featuredImage}
                     title={product.title}
-                    rating={product.reviews?.ratings || 0}
+                    rating={product.ratings || 0}
                     price={product.price}
                     originalPrice={product.compareAtPrice}
                     onAddToCart={() => handleAddToCart(product._id)}

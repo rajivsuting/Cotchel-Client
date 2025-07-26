@@ -34,6 +34,7 @@ import api from "../services/apiService";
 import { API } from "../config/api";
 import { useSelector, useDispatch } from "react-redux";
 import { setCartCount } from "../redux/slices/cartSlice";
+import { extractCartData } from "../utils/cartUtils";
 
 const Navbar = () => {
   const { isAuthenticated, logout, user, checkAuth } = useAuth();
@@ -412,25 +413,22 @@ const Navbar = () => {
     const fetchCartCount = async () => {
       try {
         const response = await api.get(API.CART.GET, { withCredentials: true });
-        if (response.data.data && response.data.data.items) {
-          const totalItems = response.data.data.items.reduce(
-            (sum, item) => sum + item.quantity,
-            0
-          );
-          dispatch(setCartCount(totalItems));
-        } else {
-          dispatch(setCartCount(0));
-        }
+        const { count } = extractCartData(response);
+        dispatch(setCartCount(count));
       } catch (error) {
         dispatch(setCartCount(0));
       }
     };
+
     if (
       isAuthenticated &&
       typeof isAuthenticated === "function" &&
       isAuthenticated()
     ) {
       fetchCartCount();
+    } else {
+      // Clear cart count when user is not authenticated
+      dispatch(setCartCount(0));
     }
   }, [isAuthenticated, dispatch]);
 

@@ -6,6 +6,8 @@ import {
   useCallback,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setCartItems, setCartCount } from "../redux/slices/cartSlice";
 import api, { handleApiError } from "../services/apiService";
 import { API } from "../config/api";
 
@@ -17,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // Add axios interceptor for handling 401 errors
   useEffect(() => {
@@ -101,11 +104,17 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post(API.AUTH.LOGOUT);
       setUser(null);
+      // Clear cart data from Redux when logging out
+      dispatch(setCartItems([]));
+      dispatch(setCartCount(0));
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
       // Even if logout fails, clear user and redirect
       setUser(null);
+      // Clear cart data from Redux when logging out (even on error)
+      dispatch(setCartItems([]));
+      dispatch(setCartCount(0));
       navigate("/login");
     }
   };

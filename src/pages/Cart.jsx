@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setCartItems, setCartCount } from "../redux/slices/cartSlice";
 import { FaTrash } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { extractCartData } from "../utils/cartUtils";
 
 // Cart Skeleton Component
 const CartSkeleton = () => (
@@ -66,17 +67,9 @@ const Cart = () => {
         withCredentials: true,
       });
 
-      if (response.data.data) {
-        const cartData = response.data.data;
-        if (cartData.items && Array.isArray(cartData.items)) {
-          dispatch(setCartItems(cartData.items));
-          const totalItems = cartData.items.reduce(
-            (sum, item) => sum + item.quantity,
-            0
-          );
-          dispatch(setCartCount(totalItems));
-        }
-      }
+      const { items, count } = extractCartData(response);
+      dispatch(setCartItems(items));
+      dispatch(setCartCount(count));
     } catch (error) {
       console.error("Error fetching cart:", error);
     }
@@ -104,15 +97,9 @@ const Cart = () => {
       );
 
       if (response.data && response.data.data) {
-        const updatedCart = response.data.data;
-        if (updatedCart.items && Array.isArray(updatedCart.items)) {
-          dispatch(setCartItems(updatedCart.items));
-          const totalItems = updatedCart.items.reduce(
-            (sum, item) => sum + item.quantity,
-            0
-          );
-          dispatch(setCartCount(totalItems));
-        }
+        const { items, count } = extractCartData(response);
+        dispatch(setCartItems(items));
+        dispatch(setCartCount(count));
       }
     } catch (error) {
       console.error("Error updating cart:", error);

@@ -143,6 +143,19 @@ const AddressSelection = () => {
         return;
       }
 
+      // If coming from buy now, go to buy now checkout
+      if (location.state?.from === "buy-now") {
+        navigate("/buy-now-checkout", {
+          state: {
+            addressId: address._id,
+            from: "address-selection",
+            productId: location.state?.productId,
+            quantity: location.state?.quantity,
+          },
+        });
+        return;
+      }
+
       // If coming from checkout, go back to checkout with the selected address
       if (location.state?.from === "checkout") {
         navigate("/checkout", {
@@ -194,7 +207,9 @@ const AddressSelection = () => {
     switch (name) {
       case "phone":
         if (!value) error = "Phone number is required";
-        else if (!/^\d{10}$/.test(value)) error = "Invalid phone number";
+        else if (!/^[6-9]\d{9}$/.test(value))
+          error =
+            "Please enter a valid 10-digit phone number starting with 6-9";
         break;
       case "postalCode":
         if (!value) error = "Postal code is required";
@@ -202,6 +217,12 @@ const AddressSelection = () => {
         break;
       case "addressLine1":
         if (!value) error = "Address line 1 is required";
+        else if (value.length > 100)
+          error = "Address line 1 cannot exceed 100 characters";
+        break;
+      case "addressLine2":
+        if (value && value.length > 100)
+          error = "Address line 2 cannot exceed 100 characters";
         break;
       case "city":
         if (!value) error = "City is required";
@@ -213,6 +234,8 @@ const AddressSelection = () => {
         if (!value.trim()) error = "Full name is required";
         else if (!/^[a-zA-Z. ]+$/.test(value.trim()))
           error = "Name cannot contain special characters or numbers";
+        else if (value.trim().length > 40)
+          error = "Name cannot exceed 40 characters";
         break;
       default:
         break;
@@ -400,11 +423,24 @@ const AddressSelection = () => {
                             Phone
                           </label>
                           <input
-                            type="text"
+                            type="tel"
                             name="phone"
+                            maxLength={10}
                             value={formState.phone}
-                            onChange={handleEditInputChange}
+                            onChange={(e) => {
+                              // Only allow digits and limit to 10 characters
+                              const value = e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 10);
+                              setFormState((prev) => ({
+                                ...prev,
+                                phone: value,
+                              }));
+                              validateField("phone", value);
+                            }}
                             className="w-full p-2 border rounded-md focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent"
+                            placeholder="Enter 10-digit phone number"
+                            inputMode="numeric"
                           />
                         </div>
                       </div>
@@ -578,7 +614,11 @@ const AddressSelection = () => {
                       onChange={handleInputChange}
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent"
                       placeholder="Name"
+                      maxLength={40}
                     />
+                    {errors.name && (
+                      <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                    )}
                   </div>
 
                   <div>
@@ -586,13 +626,21 @@ const AddressSelection = () => {
                       Phone <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
+                      type="tel"
                       name="phone"
                       maxLength={10}
                       value={newAddress.phone}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        // Only allow digits and limit to 10 characters
+                        const value = e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 10);
+                        setNewAddress((prev) => ({ ...prev, phone: value }));
+                        validateField("phone", value);
+                      }}
                       className="w-full p-2 border rounded-md focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent"
-                      placeholder="Phone"
+                      placeholder="Enter 10-digit phone number"
+                      inputMode="numeric"
                     />
                     {errors.phone && (
                       <p className="text-red-500 text-sm mt-1">
@@ -613,6 +661,7 @@ const AddressSelection = () => {
                     className="w-full p-2 border rounded-md focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent"
                     rows="2"
                     placeholder="Address Line 1"
+                    maxLength={100}
                   />
                   {errors.addressLine1 && (
                     <p className="text-red-500 text-sm mt-1">
@@ -632,6 +681,7 @@ const AddressSelection = () => {
                     className="w-full p-2 border rounded-md focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent"
                     rows="2"
                     placeholder="Address Line 2"
+                    maxLength={100}
                   />
                 </div>
 

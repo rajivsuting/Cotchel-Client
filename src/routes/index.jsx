@@ -39,6 +39,7 @@ const SellerNotifications = lazy(() => import("../pages/seller/Notifications"));
 const SellerAddProduct = lazy(() => import("../pages/seller/AddProduct"));
 const SellerAllProducts = lazy(() => import("../pages/seller/AllProducts"));
 const OrderConfirmation = lazy(() => import("../pages/OrderConfirmation"));
+const BuyNowCheckout = lazy(() => import("../pages/BuyNowCheckout"));
 const Contact = lazy(() => import("../pages/Contact"));
 const Search = lazy(() => import("../pages/Search"));
 const SellerProductDetail = lazy(() => import("../pages/seller/ProductDetail"));
@@ -132,6 +133,16 @@ export const routes = [
       <LazyRoute>
         <ProtectedRoute>
           <Checkout />
+        </ProtectedRoute>
+      </LazyRoute>
+    ),
+  },
+  {
+    path: "/buy-now-checkout",
+    element: (
+      <LazyRoute>
+        <ProtectedRoute>
+          <BuyNowCheckout />
         </ProtectedRoute>
       </LazyRoute>
     ),

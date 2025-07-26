@@ -1,7 +1,6 @@
 export const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  // "http://localhost:5000/api";
-  "https://starfish-app-6q6ot.ondigitalocean.app/api";
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// "https://starfish-app-6q6ot.ondigitalocean.app/api";
 // "http://localhost:5000/api";
 
 export const API = {
@@ -96,7 +95,14 @@ export const API = {
   // Inquiry endpoints
   INQUIRY: {
     ALL: `${API_BASE_URL}/inquiries`,
+    USER: `${API_BASE_URL}/inquiries/user`,
     CREATE: `${API_BASE_URL}/inquiries`,
+  },
+  REVIEWS: {
+    ADD: (id) => `${API_BASE_URL}/reviews/${id}`,
+    GET: (id) => `${API_BASE_URL}/reviews/${id}`,
+    UPDATE: (reviewId) => `${API_BASE_URL}/reviews/${reviewId}`,
+    DELETE: (reviewId) => `${API_BASE_URL}/reviews/${reviewId}`,
   },
 };
 

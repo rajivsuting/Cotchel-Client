@@ -1,25 +1,23 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import api from "../services/apiService";
-import ProductCard from "../components/ProductCard";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { toast } from "react-hot-toast";
-import { useAuth } from "../context/AuthContext";
-import { useDispatch } from "react-redux";
-import {
-  addToCart,
-  setCartCount,
-  setCartItems,
-} from "../redux/slices/cartSlice";
-import { API, handleApiError } from "../config/api";
 import {
   FaFilter,
-  FaChevronDown,
-  FaChevronUp,
-  FaSort,
   FaTimes,
   FaStar,
+  FaShoppingCart,
+  FaChevronUp,
+  FaChevronDown,
 } from "react-icons/fa";
+import { BsHeart, BsHeartFill } from "react-icons/bs";
+import { toast } from "react-hot-toast";
+import { API, handleApiError } from "../config/api";
+import api from "../services/apiService";
+import { useAuth } from "../context/AuthContext";
+import { useDispatch } from "react-redux";
+import { setCartItems, setCartCount } from "../redux/slices/cartSlice";
+import { extractCartData, fetchAndSyncCart } from "../utils/cartUtils";
+import ProductCard from "../components/ProductCard";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { Link } from "react-router-dom";
 
 const Search = () => {
@@ -129,12 +127,8 @@ const Search = () => {
       }
 
       if (response.data && response.data.success && response.data.data) {
-        const cartData = response.data.data;
-        if (cartData.items && Array.isArray(cartData.items)) {
-          dispatch(setCartItems(cartData.items));
-          dispatch(setCartCount(cartData.items.length));
-          toast.success(response.data.message);
-        }
+        await fetchAndSyncCart(dispatch);
+        toast.success(response.data.message);
       } else {
         toast.error(response.data?.message || "Failed to add item to cart");
       }
@@ -235,8 +229,17 @@ const Search = () => {
           ...(selectedBrands.length > 0 && {
             brands: selectedBrands.join(","),
           }),
-          ...(selectedRating && { rating: selectedRating }),
-          ...(selectedLotSize && { lotSize: selectedLotSize }),
+          ...(selectedRating && { ratings: selectedRating }),
+          ...(selectedLotSize && {
+            ...(selectedLotSize.endsWith("+")
+              ? { lotSizeMin: selectedLotSize.replace("+", "") }
+              : selectedLotSize.includes("-")
+              ? (() => {
+                  const [min, max] = selectedLotSize.split("-");
+                  return { lotSizeMin: min, lotSizeMax: max };
+                })()
+              : { lotSize: selectedLotSize }),
+          }),
         });
 
         const response = await api.get(`${API.PRODUCTS.SEARCH}?${params}`, {
@@ -342,6 +345,31 @@ const Search = () => {
       document.removeEventListener("mouseup", handlePriceSliderMouseUp);
     };
   }, [isDragging, priceRange]);
+
+  // Lot size options for range filtering
+  const lotSizeOptions = [
+    { value: "1-10", label: "1 to 10" },
+    { value: "10-20", label: "10 to 20" },
+    { value: "20-30", label: "20 to 30" },
+    { value: "30+", label: "30+" },
+  ];
+
+  const handleLotSizeChange = (value) => {
+    let min = null,
+      max = null;
+    if (value.endsWith("+")) {
+      min = value.replace("+", "");
+    } else {
+      [min, max] = value.split("-");
+    }
+    const params = new URLSearchParams(searchParams);
+    if (min) params.set("lotSizeMin", min);
+    else params.delete("lotSizeMin");
+    if (max) params.set("lotSizeMax", max);
+    else params.delete("lotSizeMax");
+    setSearchParams(params);
+    setSelectedLotSize(value);
+  };
 
   // Hide sort bar
   const showSortBar = false;
@@ -626,20 +654,13 @@ const Search = () => {
           </button>
           {expandedFilters.lotSize && (
             <div className="px-4 pb-4 space-y-2">
-              {[
-                { value: "1", label: "Single Item" },
-                { value: "2-5", label: "2-5 Items" },
-                { value: "6-10", label: "6-10 Items" },
-                { value: "10+", label: "10+ Items" },
-              ].map((option) => (
+              {lotSizeOptions.map((option) => (
                 <label key={option.value} className="flex items-center gap-2">
                   <input
                     type="radio"
                     name="lotSize"
                     checked={selectedLotSize === option.value}
-                    onChange={(e) =>
-                      handleFilterChange("lotSize", e.target.value)
-                    }
+                    onChange={() => handleLotSizeChange(option.value)}
                     value={option.value}
                     className="text-[#0D0B46] focus:ring-[#0D0B46]"
                   />

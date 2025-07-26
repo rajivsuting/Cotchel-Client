@@ -53,9 +53,8 @@ const ManageAddress = () => {
 
   // Validation functions
   const validatePhone = (phone) => {
-    const phoneRegex = /^[6-9]\d{9}$/;
     if (!phone) return "Phone number is required";
-    if (!phoneRegex.test(phone))
+    if (!/^[6-9]\d{9}$/.test(phone))
       return "Please enter a valid 10-digit phone number starting with 6-9";
     return "";
   };
@@ -74,11 +73,19 @@ const ManageAddress = () => {
         if (!value.trim()) return "Full name is required";
         if (!/^[a-zA-Z. ]+$/.test(value.trim()))
           return "Name cannot contain special characters or numbers";
+        if (value.trim().length > 40) return "Name cannot exceed 40 characters";
         return "";
       case "phone":
         return validatePhone(value);
       case "addressLine1":
-        return !value.trim() ? "Address line 1 is required" : "";
+        if (!value.trim()) return "Address line 1 is required";
+        if (value.length > 100)
+          return "Address line 1 cannot exceed 100 characters";
+        return "";
+      case "addressLine2":
+        if (value && value.length > 100)
+          return "Address line 2 cannot exceed 100 characters";
+        return "";
       case "city":
         return !value.trim() ? "City is required" : "";
       case "state":
@@ -121,7 +128,13 @@ const ManageAddress = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
+    let newValue = type === "checkbox" ? checked : value;
+
+    // Special handling for phone number
+    if (name === "phone") {
+      // Only allow digits and limit to 10 characters
+      newValue = value.replace(/\D/g, "").slice(0, 10);
+    }
 
     setFormData((prev) => ({
       ...prev,
@@ -346,6 +359,7 @@ const ManageAddress = () => {
                           : "border-gray-300"
                       }`}
                       placeholder="Enter your full name"
+                      maxLength={40}
                     />
                     {errors.name && touched.name && (
                       <p className="mt-1 text-sm text-red-600">{errors.name}</p>
@@ -366,8 +380,9 @@ const ManageAddress = () => {
                           ? "border-red-500 focus:ring-red-500"
                           : "border-gray-300"
                       }`}
-                      placeholder="Enter 10-digit phone number"
+                      placeholder="Enter 10-digit phone number starting with 6-9"
                       maxLength="10"
+                      inputMode="numeric"
                     />
                     {errors.phone && touched.phone && (
                       <p className="mt-1 text-sm text-red-600">
@@ -391,6 +406,7 @@ const ManageAddress = () => {
                           : "border-gray-300"
                       }`}
                       placeholder="Enter your street address"
+                      maxLength={100}
                     />
                     {errors.addressLine1 && touched.addressLine1 && (
                       <p className="mt-1 text-sm text-red-600">
@@ -410,6 +426,7 @@ const ManageAddress = () => {
                       onBlur={handleBlur}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46]"
                       placeholder="Apartment, suite, etc. (optional)"
+                      maxLength={100}
                     />
                   </div>
                   <div>
@@ -642,6 +659,7 @@ const ManageAddress = () => {
                             : "border-gray-300"
                         }`}
                         placeholder="Enter your full name"
+                        maxLength={40}
                       />
                       {errors.name && touched.name && (
                         <p className="mt-1 text-sm text-red-600">
@@ -664,8 +682,9 @@ const ManageAddress = () => {
                             ? "border-red-500 focus:ring-red-500"
                             : "border-gray-300"
                         }`}
-                        placeholder="Enter 10-digit phone number"
+                        placeholder="Enter 10-digit phone number starting with 6-9"
                         maxLength="10"
+                        inputMode="numeric"
                       />
                       {errors.phone && touched.phone && (
                         <p className="mt-1 text-sm text-red-600">
@@ -689,6 +708,7 @@ const ManageAddress = () => {
                             : "border-gray-300"
                         }`}
                         placeholder="Enter your street address"
+                        maxLength={100}
                       />
                       {errors.addressLine1 && touched.addressLine1 && (
                         <p className="mt-1 text-sm text-red-600">
@@ -708,6 +728,7 @@ const ManageAddress = () => {
                         onBlur={handleBlur}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0D0B46]"
                         placeholder="Apartment, suite, etc. (optional)"
+                        maxLength={100}
                       />
                     </div>
                     <div>

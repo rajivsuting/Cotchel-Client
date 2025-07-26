@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, memo, useRef, useEffect } from "react";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { FaStar } from "react-icons/fa";
 import { Link } from "react-router-dom";
@@ -20,6 +20,8 @@ const ProductCard = memo(
   }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [imageLoaded, setImageLoaded] = useState(false);
+    const [isInView, setIsInView] = useState(false);
+    const imageRef = useRef(null);
 
     const calculateDiscount = () => {
       if (!originalPrice || originalPrice <= price) return 0;
@@ -28,19 +30,26 @@ const ProductCard = memo(
 
     const discount = calculateDiscount();
 
-    const truncateTitle = (text) => {
-      return text.length > 20 ? text.substring(0, 20) + "..." : text;
-    };
+    // Intersection Observer for lazy loading
+    useEffect(() => {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observer.disconnect();
+          }
+        },
+        {
+          rootMargin: "50px", // Start loading 50px before the image comes into view
+        }
+      );
 
-    // Responsive title truncation
-    const getResponsiveTitle = () => {
-      if (window.innerWidth <= 640) {
-        // Mobile (sm and below)
-        return title.length > 12 ? title.substring(0, 12) + "..." : title;
+      if (imageRef.current) {
+        observer.observe(imageRef.current);
       }
-      // Desktop/tablet
-      return truncateTitle(title);
-    };
+
+      return () => observer.disconnect();
+    }, []);
 
     return (
       <Link
@@ -53,19 +62,24 @@ const ProductCard = memo(
           onMouseLeave={() => setIsHovered(false)}
         >
           {/* Product Image Container */}
-          <div className="relative aspect-square overflow-hidden bg-gray-50">
+          <div
+            className="relative aspect-square overflow-hidden bg-gray-50"
+            ref={imageRef}
+          >
             {!imageLoaded && (
               <div className="absolute inset-0 bg-gray-200 animate-pulse"></div>
             )}
-            <img
-              src={image}
-              alt={title}
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ${
-                imageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              loading="lazy"
-              onLoad={() => setImageLoaded(true)}
-            />
+            {isInView && (
+              <img
+                src={image}
+                alt={title}
+                className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 ${
+                  imageLoaded ? "opacity-100" : "opacity-0"
+                }`}
+                loading="lazy"
+                onLoad={() => setImageLoaded(true)}
+              />
+            )}
             {/* Discount Badge */}
             {discount > 0 && (
               <div className="absolute top-0 right-0 bg-[#0D0B46] text-white px-2 py-1 text-sm font-bold rounded-bl-xl">
@@ -80,10 +94,15 @@ const ProductCard = memo(
             {/* Title and Rating */}
             <div className="flex justify-between items-start mb-2">
               <h2
-                className="text-gray-800 font-medium text-sm flex-1 mr-2 group-hover:text-[#0D0B46] transition-colors"
+                className="text-gray-800 font-medium text-sm flex-1 mr-2 group-hover:text-[#0D0B46] transition-colors truncate sm:max-w-none"
                 title={title}
               >
-                {getResponsiveTitle()}
+                <span className="sm:hidden">
+                  {title.length > 12 ? title.substring(0, 12) + "..." : title}
+                </span>
+                <span className="hidden sm:block">
+                  {title.length > 20 ? title.substring(0, 20) + "..." : title}
+                </span>
               </h2>
               <div className="flex items-center bg-orange-400 px-2 py-1 rounded shrink-0">
                 <FaStar className="w-3.5 h-3.5 text-white" />

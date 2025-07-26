@@ -5,7 +5,6 @@ import { API, handleApiError } from "../config/api";
 import api from "../services/apiService";
 import LoadingState from "../components/LoadingState";
 import ErrorBoundary from "../components/ErrorBoundary";
-import { useSelector, useDispatch } from "react-redux";
 import {
   FiCreditCard,
   FiLock,
@@ -14,25 +13,14 @@ import {
   FiClock,
   FiCheckCircle,
 } from "react-icons/fi";
-import { setCartItems, setCartCount } from "../redux/slices/cartSlice";
 
-const Checkout = () => {
+const BuyNowCheckout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [cart, setCart] = useState({
-    items: [],
-    subtotal: 0,
-    totalPrice: 0,
-    shippingFee: 0,
-    discount: 0,
-  });
   const [selectedAddress, setSelectedAddress] = useState(null);
-
-  // Get cart from Redux state
-  const reduxCartItems = useSelector((state) => state.cart.items);
+  const [buyNowData, setBuyNowData] = useState(null);
 
   useEffect(() => {
     const addressId = location.state?.addressId;
@@ -44,189 +32,63 @@ const Checkout = () => {
       return;
     }
 
-    // If coming from address selection, fetch data
-    if (from === "address-selection") {
-      fetchCartAndAddress(addressId);
-    } else {
-      // If directly accessing checkout, verify cart has items
-      verifyCartAndFetchAddress(addressId);
+    // Get buy now data from sessionStorage
+    const storedBuyNowData = sessionStorage.getItem("buyNowData");
+    if (!storedBuyNowData) {
+      toast.error("Buy now data not found. Please try again.");
+      navigate("/");
+      return;
+    }
+
+    try {
+      const parsedData = JSON.parse(storedBuyNowData);
+      setBuyNowData(parsedData);
+      fetchAddress(addressId);
+    } catch (error) {
+      console.error("Error parsing buy now data:", error);
+      toast.error("Invalid buy now data. Please try again.");
+      navigate("/");
     }
   }, [location.state]);
 
-  const verifyCartAndFetchAddress = async (addressId) => {
+  const fetchAddress = async (addressId) => {
     try {
       setLoading(true);
-      console.log("Verifying cart and fetching address...");
+      const addressResponse = await api.get(`${API.ADDRESS.BASE}/${addressId}`);
 
-      // First check Redux state
-      if (reduxCartItems && reduxCartItems.length > 0) {
-        console.log("Using cart data from Redux:", reduxCartItems);
-        // Use Redux cart data and just fetch address
-        const addressResponse = await api.get(
-          `${API.ADDRESS.BASE}/${addressId}`
-        );
-        console.log("Address verification response:", addressResponse.data);
-
-        if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
-          // Create cart object from Redux data
-          const cartData = {
-            items: reduxCartItems,
-            subtotal: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
-              0
-            ),
-            totalPrice: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
-              0
-            ),
-            shippingFee: 0,
-            discount: 0,
-          };
-          setCart(cartData);
-        } else {
-          toast.error("Address not found");
-          navigate("/address-selection", {
-            state: { from: "checkout" },
-          });
-        }
+      if (addressResponse.data?.data) {
+        setSelectedAddress(addressResponse.data.data);
       } else {
-        // Fallback to API call if Redux is empty
-        console.log("Redux cart is empty, fetching from API...");
-        const cartResponse = await api.get(API.CART.GET);
-        console.log("Cart verification response:", cartResponse.data);
-
-        if (!cartResponse.data?.data?.items?.length) {
-          console.log("Cart is empty during verification, redirecting to cart");
-          toast.error("Your cart is empty");
-          navigate("/cart");
-          return;
-        }
-
-        setCart(cartResponse.data.data);
-
-        // Fetch address after verifying cart
-        const addressResponse = await api.get(
-          `${API.ADDRESS.BASE}/${addressId}`
-        );
-        console.log("Address verification response:", addressResponse.data);
-        if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
-        } else {
-          toast.error("Address not found");
-          navigate("/address-selection", {
-            state: { from: "checkout" },
-          });
-        }
+        toast.error("Address not found");
+        navigate("/address-selection", { state: { from: "buy-now" } });
       }
     } catch (error) {
-      console.error("Error verifying checkout data:", error);
-      toast.error(handleApiError(error));
-      if (error.response?.status === 401) {
-        navigate("/login", { state: { from: "/checkout" } });
-      } else {
-        navigate("/cart");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCartAndAddress = async (addressId) => {
-    try {
-      setLoading(true);
-      console.log("Fetching cart and address data...");
-
-      // First check Redux state
-      if (reduxCartItems && reduxCartItems.length > 0) {
-        console.log("Using cart data from Redux:", reduxCartItems);
-        // Use Redux cart data and just fetch address
-        const addressResponse = await api.get(
-          `${API.ADDRESS.BASE}/${addressId}`
-        );
-        console.log("Address response:", addressResponse.data);
-
-        if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
-          // Create cart object from Redux data
-          const cartData = {
-            items: reduxCartItems,
-            subtotal: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
-              0
-            ),
-            totalPrice: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
-              0
-            ),
-            shippingFee: 0,
-            discount: 0,
-          };
-          setCart(cartData);
-        } else {
-          toast.error("Address not found");
-          navigate("/address-selection", {
-            state: { from: "checkout" },
-          });
-        }
-      } else {
-        // Fallback to API call if Redux is empty
-        console.log("Redux cart is empty, fetching from API...");
-        const [cartResponse, addressResponse] = await Promise.all([
-          api.get(API.CART.GET),
-          api.get(`${API.ADDRESS.BASE}/${addressId}`),
-        ]);
-
-        console.log("Cart response:", cartResponse.data);
-        console.log("Address response:", addressResponse.data);
-
-        if (!cartResponse.data?.data?.items?.length) {
-          console.log("Cart is empty, redirecting to cart");
-          toast.error("Your cart is empty");
-          navigate("/cart");
-          return;
-        }
-
-        setCart(cartResponse.data.data);
-
-        if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
-        } else {
-          toast.error("Address not found");
-          navigate("/address-selection", {
-            state: { from: "checkout" },
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching checkout data:", error);
-      toast.error(handleApiError(error));
-      if (error.response?.status === 401) {
-        navigate("/login", { state: { from: "/checkout" } });
-      } else {
-        navigate("/cart");
-      }
+      console.error("Error fetching address:", error);
+      toast.error("Failed to fetch address");
+      navigate("/address-selection", { state: { from: "buy-now" } });
     } finally {
       setLoading(false);
     }
   };
 
   const handlePlaceOrder = async () => {
-    if (!selectedAddress) {
-      toast.error("Please select a delivery address");
+    if (!selectedAddress || !buyNowData) {
+      toast.error("Missing order information");
       return;
     }
 
     try {
       setPlacingOrder(true);
 
-      // Create order from cart
-      const response = await api.post(API.ORDERS.CART_CHECKOUT, {
+      // Create order using buy now endpoint
+      const response = await api.post(API.ORDERS.BUY_NOW, {
+        productId: buyNowData.productId,
+        quantity: buyNowData.quantity,
         addressId: selectedAddress._id,
       });
 
-      if (response.data?.orders) {
-        const orderData = response.data.orders[0]; // Store order data in a variable
+      if (response.data?.order) {
+        const orderData = response.data.order;
 
         // Initialize Razorpay
         const options = {
@@ -245,9 +107,8 @@ const Checkout = () => {
                 signature: razorpayResponse.razorpay_signature,
               });
 
-              // Clear cart from frontend Redux state after successful payment
-              dispatch(setCartItems([]));
-              dispatch(setCartCount(0));
+              // Clear buy now data from sessionStorage
+              sessionStorage.removeItem("buyNowData");
 
               toast.success("Payment successful!");
               navigate(`/order-confirmation/${orderData.orderId}`);
@@ -280,8 +141,9 @@ const Checkout = () => {
   const handleChangeAddress = () => {
     navigate("/address-selection", {
       state: {
-        from: "checkout",
-        returnTo: "/checkout",
+        from: "buy-now",
+        productId: buyNowData?.productId,
+        quantity: buyNowData?.quantity,
       },
     });
   };
@@ -289,6 +151,30 @@ const Checkout = () => {
   if (loading) {
     return <LoadingState type="card" count={3} />;
   }
+
+  if (!buyNowData || !selectedAddress) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Order Information Missing
+          </h2>
+          <p className="text-gray-600 mb-4">
+            Please try again from the product page.
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="bg-[#0c0b45] text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalPrice =
+    buyNowData.product.price * buyNowData.quantity * buyNowData.product.lotSize;
 
   return (
     <ErrorBoundary>
@@ -374,51 +260,46 @@ const Checkout = () => {
                 Order Summary
               </h2>
 
-              {/* Cart Items */}
+              {/* Product Item */}
               <div className="space-y-4 mb-6">
-                {cart.items.map((item) => (
-                  <div key={item._id} className="flex gap-4">
-                    <img
-                      src={item.productId.images[0]}
-                      alt={item.productId.title}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-900">
-                        {item.productId.title}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Qty: {item.quantity}
-                      </p>
-                      <p className="text-sm font-medium text-gray-900">
-                        ₹{item.price * item.quantity}
-                      </p>
-                    </div>
+                <div className="flex gap-4">
+                  <img
+                    src={buyNowData.product.featuredImage}
+                    alt={buyNowData.product.title}
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-gray-900">
+                      {buyNowData.product.title}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Qty: {buyNowData.quantity} lots
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Lot Size: {buyNowData.product.lotSize} units
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      ₹{totalPrice.toLocaleString()}
+                    </p>
                   </div>
-                ))}
+                </div>
               </div>
 
               {/* Price Breakdown */}
               <div className="border-t border-gray-200 pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">₹{cart.subtotal}</span>
+                  <span className="font-medium">
+                    ₹{totalPrice.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">₹{cart.shippingFee}</span>
+                  <span className="font-medium">₹0</span>
                 </div>
-                {cart.discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Discount</span>
-                    <span className="font-medium text-green-600">
-                      -₹{cart.discount}
-                    </span>
-                  </div>
-                )}
                 <div className="flex justify-between text-base font-semibold pt-2 border-t border-gray-200">
                   <span>Total</span>
-                  <span>₹{cart.totalPrice}</span>
+                  <span>₹{totalPrice.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -454,4 +335,4 @@ const Checkout = () => {
   );
 };
 
-export default Checkout;
+export default BuyNowCheckout;

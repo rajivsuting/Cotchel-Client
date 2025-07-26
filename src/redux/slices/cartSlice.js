@@ -7,6 +7,12 @@ const initialState = {
   error: null,
 };
 
+// Helper function to calculate cart count
+const calculateCartCount = (items) => {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+};
+
 const cartSlice = createSlice({
   name: "cart",
   initialState,
@@ -20,10 +26,7 @@ const cartSlice = createSlice({
     setCartItems: (state, action) => {
       if (Array.isArray(action.payload)) {
         state.items = action.payload;
-        state.count = action.payload.reduce(
-          (sum, item) => sum + (item.quantity || 0),
-          0
-        );
+        state.count = calculateCartCount(action.payload);
       }
     },
     setCartCount: (state, action) => {
@@ -39,10 +42,7 @@ const cartSlice = createSlice({
         } else {
           state.items.push(action.payload);
         }
-        state.count = state.items.reduce(
-          (sum, item) => sum + (item.quantity || 0),
-          0
-        );
+        state.count = calculateCartCount(state.items);
       }
     },
     removeFromCart: (state, action) => {
@@ -50,10 +50,7 @@ const cartSlice = createSlice({
         state.items = state.items.filter(
           (item) => item.productId._id !== action.payload
         );
-        state.count = state.items.reduce(
-          (sum, item) => sum + (item.quantity || 0),
-          0
-        );
+        state.count = calculateCartCount(state.items);
       }
     },
     updateCartItem: (state, action) => {
@@ -65,6 +62,7 @@ const cartSlice = createSlice({
           item.quantity = action.payload.quantity;
           item.totalPrice = item.price * item.quantity;
         }
+        state.count = calculateCartCount(state.items);
       }
     },
     clearCart: (state) => {
