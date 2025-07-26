@@ -73,11 +73,11 @@ const Checkout = () => {
           const cartData = {
             items: reduxCartItems,
             subtotal: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
+              (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),
             totalPrice: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
+              (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),
             shippingFee: 0,
@@ -152,11 +152,11 @@ const Checkout = () => {
           const cartData = {
             items: reduxCartItems,
             subtotal: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
+              (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),
             totalPrice: reduxCartItems.reduce(
-              (sum, item) => sum + item.price * item.quantity,
+              (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),
             shippingFee: 0,
@@ -391,7 +391,7 @@ const Checkout = () => {
                         Qty: {item.quantity}
                       </p>
                       <p className="text-sm font-medium text-gray-900">
-                        ₹{item.price * item.quantity}
+                        ₹{item.price * item.quantity * item.lotSize}
                       </p>
                     </div>
                   </div>
@@ -406,7 +406,7 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">₹{cart.shippingFee}</span>
+                  <span className="font-medium">₹0</span>
                 </div>
                 {cart.discount > 0 && (
                   <div className="flex justify-between text-sm">

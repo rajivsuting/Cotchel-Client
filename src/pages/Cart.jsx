@@ -133,7 +133,7 @@ const Cart = () => {
 
   const calculateSubtotal = () => {
     return items.reduce((total, item) => {
-      return total + item.price * item.quantity;
+      return total + item.price * item.quantity * item.lotSize;
     }, 0);
   };
 
@@ -254,7 +254,12 @@ const Cart = () => {
                             </div>
                             <div className="text-right">
                               <span className="text-gray-800 font-semibold">
-                                ₹{(item.price * item.quantity).toFixed(2)}
+                                ₹
+                                {(
+                                  item.price *
+                                  item.quantity *
+                                  item.lotSize
+                                ).toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -321,7 +326,12 @@ const Cart = () => {
                                     </button>
                                   </div>
                                   <span className="text-gray-800 font-semibold">
-                                    ₹{(item.price * item.quantity).toFixed(2)}
+                                    ₹
+                                    {(
+                                      item.price *
+                                      item.quantity *
+                                      item.lotSize
+                                    ).toFixed(2)}
                                   </span>
                                 </div>
                               </div>
@@ -367,9 +377,7 @@ const Cart = () => {
                       </div>
                       <div className="flex justify-between text-gray-600">
                         <span>Shipping Fee</span>
-                        <span>
-                          {calculateSubtotal() > 999 ? "₹999" : "Free"}
-                        </span>
+                        <span>₹0</span>
                       </div>
                       <div className="border-t border-dashed border-gray-200 pt-4 mt-4">
                         <div className="flex justify-between text-lg sm:text-xl font-medium text-gray-800">
@@ -389,10 +397,10 @@ const Cart = () => {
                         <FiShield className="w-5 h-5 text-[#0c0b45]" />
                         <span>Secure Checkout</span>
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-gray-500">
+                      {/* <div className="flex items-center gap-3 text-sm text-gray-500">
                         <FiClock className="w-5 h-5 text-[#0c0b45]" />
                         <span>Easy Returns within 7 days</span>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
