@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { toast } from "react-hot-toast";
 import api from "../services/apiService";
 import { API } from "../config/api";
+import { Country, State, City } from "country-state-city";
 
 const SellerDetails = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const SellerDetails = () => {
     city: "",
     state: "",
     postalCode: "",
+    country: "India",
     bankName: "",
     accountName: "",
     accountNumber: "",
@@ -26,6 +28,12 @@ const SellerDetails = () => {
   });
 
   const [errors, setErrors] = useState({});
+
+  // State for dynamic state/city dropdowns
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [states, setStates] = useState(State.getStatesOfCountry("IN"));
+  const [cities, setCities] = useState([]);
 
   useEffect(() => {
     // Check if user is already verified as seller
@@ -43,9 +51,56 @@ const SellerDetails = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Apply input formatting and validation based on field type
+    let formattedValue = value;
+
+    switch (name) {
+      case "pan":
+        // PAN: Only uppercase letters and numbers, max 10 characters
+        formattedValue = value
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 10);
+        break;
+      case "gstin":
+        // GSTIN: Only uppercase letters and numbers, max 15 characters
+        formattedValue = value
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 15);
+        break;
+      case "postalCode":
+        // Postal Code: Only numbers, max 6 digits
+        formattedValue = value.replace(/\D/g, "").slice(0, 6);
+        break;
+      case "accountNumber":
+        // Account Number: Only numbers, max 18 digits
+        formattedValue = value.replace(/\D/g, "").slice(0, 18);
+        break;
+      case "ifscCode":
+        // IFSC Code: Only uppercase letters and numbers, max 11 characters
+        formattedValue = value
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 11);
+        break;
+      case "city":
+      case "state":
+        // City and State: No formatting needed for dropdowns
+        break;
+      case "accountName":
+        // Account Name: Only letters, spaces, and periods
+        formattedValue = value.replace(/[^a-zA-Z\s.]/g, "");
+        break;
+      default:
+        // For other fields, just trim whitespace
+        break;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: formattedValue,
     }));
 
     // Clear error when user starts typing
@@ -57,60 +112,131 @@ const SellerDetails = () => {
     }
   };
 
+  const handleStateChange = (e) => {
+    const stateCode = e.target.value;
+    setSelectedState(stateCode);
+    setFormData((prev) => ({ ...prev, state: stateCode, city: "" }));
+    setCities(City.getCitiesOfState("IN", stateCode));
+    setSelectedCity("");
+  };
+
+  const handleCityChange = (e) => {
+    const cityName = e.target.value;
+    setSelectedCity(cityName);
+    setFormData((prev) => ({ ...prev, city: cityName }));
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
+    // Business Name validation
     if (!formData.businessName.trim()) {
       newErrors.businessName = "Business name is required";
+    } else if (formData.businessName.trim().length < 3) {
+      newErrors.businessName = "Business name must be at least 3 characters";
+    } else if (formData.businessName.trim().length > 100) {
+      newErrors.businessName = "Business name must be less than 100 characters";
+    } else if (!/^[a-zA-Z0-9\s&.,'-]+$/.test(formData.businessName.trim())) {
+      newErrors.businessName = "Business name contains invalid characters";
     }
 
+    // PAN validation
     if (!formData.pan.trim()) {
       newErrors.pan = "PAN is required";
-    } else if (!/^[A-Z]{5}\d{4}[A-Z]{1}$/.test(formData.pan)) {
-      newErrors.pan = "Invalid PAN format";
+    } else if (!/^[A-Z]{5}\d{4}[A-Z]{1}$/.test(formData.pan.trim())) {
+      newErrors.pan = "Invalid PAN format (e.g., ABCDE1234F)";
     }
 
-    if (
-      formData.gstin &&
+    // GSTIN validation (now required)
+    if (!formData.gstin.trim()) {
+      newErrors.gstin = "GSTIN is required";
+    } else if (
       !/^(\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1})$/.test(
-        formData.gstin
+        formData.gstin.trim()
       )
     ) {
-      newErrors.gstin = "Invalid GSTIN format";
+      newErrors.gstin = "Invalid GSTIN format (e.g., 22AAAAA0000A1Z5)";
     }
 
+    // Address Line 1 validation
     if (!formData.addressLine1.trim()) {
       newErrors.addressLine1 = "Address is required";
+    } else if (formData.addressLine1.trim().length < 10) {
+      newErrors.addressLine1 = "Address must be at least 10 characters";
+    } else if (formData.addressLine1.trim().length > 100) {
+      newErrors.addressLine1 = "Address must be less than 100 characters";
     }
 
+    // Address Line 2 validation (optional but with length limit)
+    if (
+      formData.addressLine2.trim() &&
+      formData.addressLine2.trim().length > 100
+    ) {
+      newErrors.addressLine2 =
+        "Address line 2 must be less than 100 characters";
+    }
+
+    // City validation
     if (!formData.city.trim()) {
       newErrors.city = "City is required";
     }
 
+    // State validation
     if (!formData.state.trim()) {
       newErrors.state = "State is required";
     }
 
+    // Postal Code validation
     if (!formData.postalCode.trim()) {
       newErrors.postalCode = "Postal code is required";
+    } else if (!/^\d{6}$/.test(formData.postalCode.trim())) {
+      newErrors.postalCode = "Postal code must be 6 digits";
     }
 
+    // Bank Name validation
     if (!formData.bankName.trim()) {
       newErrors.bankName = "Bank name is required";
+    } else if (formData.bankName.trim().length < 3) {
+      newErrors.bankName = "Bank name must be at least 3 characters";
+    } else if (formData.bankName.trim().length > 100) {
+      newErrors.bankName = "Bank name must be less than 100 characters";
+    } else if (!/^[a-zA-Z0-9\s&.,'-]+$/.test(formData.bankName.trim())) {
+      newErrors.bankName = "Bank name contains invalid characters";
     }
 
+    // Account Name validation
     if (!formData.accountName.trim()) {
       newErrors.accountName = "Account holder name is required";
+    } else if (formData.accountName.trim().length < 3) {
+      newErrors.accountName =
+        "Account holder name must be at least 3 characters";
+    } else if (formData.accountName.trim().length > 100) {
+      newErrors.accountName =
+        "Account holder name must be less than 100 characters";
+    } else if (!/^[a-zA-Z\s.]+$/.test(formData.accountName.trim())) {
+      newErrors.accountName =
+        "Account holder name can only contain letters, spaces, and periods";
     }
 
+    // Account Number validation
     if (!formData.accountNumber.trim()) {
       newErrors.accountNumber = "Account number is required";
+    } else if (!/^\d{9,18}$/.test(formData.accountNumber.trim())) {
+      newErrors.accountNumber = "Account number must be 9-18 digits";
     }
 
+    // IFSC Code validation
     if (!formData.ifscCode.trim()) {
       newErrors.ifscCode = "IFSC code is required";
-    } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode)) {
-      newErrors.ifscCode = "Invalid IFSC code format";
+    } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode.trim())) {
+      newErrors.ifscCode = "Invalid IFSC code format (e.g., ABCD0001234)";
+    }
+
+    // Branch validation (required)
+    if (!formData.branch.trim()) {
+      newErrors.branch = "Branch name is required";
+    } else if (formData.branch.trim().length > 100) {
+      newErrors.branch = "Branch name must be less than 100 characters";
     }
 
     setErrors(newErrors);
@@ -197,6 +323,7 @@ const SellerDetails = () => {
                       errors.businessName ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="Enter your business name"
+                    maxLength={100}
                   />
                   {errors.businessName && (
                     <p className="text-red-500 text-sm mt-1">
@@ -227,7 +354,7 @@ const SellerDetails = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    GSTIN (Optional)
+                    GSTIN *
                   </label>
                   <input
                     type="text"
@@ -238,6 +365,7 @@ const SellerDetails = () => {
                       errors.gstin ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="22AAAAA0000A1Z5"
+                    maxLength={15}
                   />
                   {errors.gstin && (
                     <p className="text-red-500 text-sm mt-1">{errors.gstin}</p>
@@ -265,6 +393,7 @@ const SellerDetails = () => {
                       errors.addressLine1 ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="Street address, building, etc."
+                    maxLength={100}
                   />
                   {errors.addressLine1 && (
                     <p className="text-red-500 text-sm mt-1">
@@ -284,44 +413,69 @@ const SellerDetails = () => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Apartment, suite, etc."
+                    maxLength={100}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City *
+                    Country *
                   </label>
                   <input
                     type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.city ? "border-red-500" : "border-gray-300"
-                    }`}
-                    placeholder="Enter city"
+                    name="country"
+                    value="India"
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
                   />
-                  {errors.city && (
-                    <p className="text-red-500 text-sm mt-1">{errors.city}</p>
-                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     State *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.state ? "border-red-500" : "border-gray-300"
                     }`}
-                    placeholder="Enter state"
-                  />
+                    value={selectedState}
+                    onChange={handleStateChange}
+                  >
+                    <option value="">Select State</option>
+                    {states.map((state) => (
+                      <option key={state.isoCode} value={state.isoCode}>
+                        {state.name}
+                      </option>
+                    ))}
+                  </select>
                   {errors.state && (
                     <p className="text-red-500 text-sm mt-1">{errors.state}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City *
+                  </label>
+                  <select
+                    name="city"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.city ? "border-red-500" : "border-gray-300"
+                    }`}
+                    value={selectedCity}
+                    onChange={handleCityChange}
+                    disabled={!selectedState}
+                  >
+                    <option value="">Select City</option>
+                    {cities.map((city) => (
+                      <option key={city.name} value={city.name}>
+                        {city.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.city && (
+                    <p className="text-red-500 text-sm mt-1">{errors.city}</p>
                   )}
                 </div>
 
@@ -338,6 +492,7 @@ const SellerDetails = () => {
                       errors.postalCode ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="Enter postal code"
+                    maxLength={6}
                   />
                   {errors.postalCode && (
                     <p className="text-red-500 text-sm mt-1">
@@ -367,6 +522,7 @@ const SellerDetails = () => {
                       errors.bankName ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="Enter bank name"
+                    maxLength={100}
                   />
                   {errors.bankName && (
                     <p className="text-red-500 text-sm mt-1">
@@ -388,6 +544,7 @@ const SellerDetails = () => {
                       errors.accountName ? "border-red-500" : "border-gray-300"
                     }`}
                     placeholder="Enter account holder name"
+                    maxLength={100}
                   />
                   {errors.accountName && (
                     <p className="text-red-500 text-sm mt-1">
@@ -411,6 +568,7 @@ const SellerDetails = () => {
                         : "border-gray-300"
                     }`}
                     placeholder="Enter account number"
+                    maxLength={18}
                   />
                   {errors.accountNumber && (
                     <p className="text-red-500 text-sm mt-1">
@@ -443,16 +601,22 @@ const SellerDetails = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Branch (Optional)
+                    Branch *
                   </label>
                   <input
                     type="text"
                     name="branch"
                     value={formData.branch}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      errors.branch ? "border-red-500" : "border-gray-300"
+                    }`}
                     placeholder="Enter branch name"
+                    maxLength={100}
                   />
+                  {errors.branch && (
+                    <p className="text-red-500 text-sm mt-1">{errors.branch}</p>
+                  )}
                 </div>
               </div>
             </div>

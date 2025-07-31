@@ -277,10 +277,24 @@ const ProductDetail = () => {
 
   const handleQuantityChange = (delta) => {
     const newQuantity = quantity + delta;
-    if (newQuantity >= 1) {
-      setQuantity(newQuantity);
+    if (newQuantity < 1) return;
+
+    // Calculate maximum available lots
+    const maxLots = Math.floor(product.quantityAvailable / product.lotSize);
+
+    // Check if new quantity exceeds maximum available lots
+    if (newQuantity > maxLots) {
+      toast.error(`Only ${maxLots} lots available for this product.`);
+      return;
     }
+
+    setQuantity(newQuantity);
   };
+
+  // Check if product is out of stock
+  const isOutOfStock =
+    product?.quantityAvailable !== undefined &&
+    product.quantityAvailable < product.lotSize;
 
   const handleBuyNow = async () => {
     if (!isAuthenticated()) {
@@ -847,51 +861,94 @@ const ProductDetail = () => {
 
                 {/* Quantity and Buttons */}
                 <div className="mb-4 md:mb-6">
-                  <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                    <span className="font-medium text-sm md:text-base">
-                      Quantity:
-                    </span>
-                    <div className="flex items-center gap-1 border  rounded-sm">
-                      <button
-                        onClick={() => handleQuantityChange(-1)}
-                        className="px-2 md:px-3 py-1 border-r hover:bg-gray-100"
-                      >
-                        -
-                      </button>
-                      <span className="px-3 md:px-4 text-sm md:text-base">
-                        {quantity}
-                      </span>
-                      <button
-                        onClick={() => handleQuantityChange(1)}
-                        className="px-2 md:px-3 py-1 border-l hover:bg-gray-100"
-                      >
-                        +
-                      </button>
+                  {isOutOfStock ? (
+                    <div className="mb-3 md:mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm md:text-base text-red-600">
+                          Out of Stock
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+                      <span className="font-medium text-sm md:text-base">
+                        Quantity:
+                      </span>
+                      <div className="flex items-center gap-1 border  rounded-sm">
+                        <button
+                          onClick={() => handleQuantityChange(-1)}
+                          disabled={quantity <= 1}
+                          className="px-2 md:px-3 py-1 border-r hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          -
+                        </button>
+                        <span className="px-3 md:px-4 text-sm md:text-base">
+                          {quantity}
+                        </span>
+                        <button
+                          onClick={() => handleQuantityChange(1)}
+                          disabled={
+                            quantity >=
+                            Math.floor(
+                              product.quantityAvailable / product.lotSize
+                            )
+                          }
+                          className="px-2 md:px-3 py-1 border-l hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            quantity >=
+                            Math.floor(
+                              product.quantityAvailable / product.lotSize
+                            )
+                              ? `Maximum ${Math.floor(
+                                  product.quantityAvailable / product.lotSize
+                                )} lots available`
+                              : "Increase quantity"
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                      {quantity >=
+                        Math.floor(
+                          product.quantityAvailable / product.lotSize
+                        ) && (
+                        <span className="text-xs text-orange-600">
+                          Max{" "}
+                          {Math.floor(
+                            product.quantityAvailable / product.lotSize
+                          )}{" "}
+                          lots
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                     <button
                       onClick={handleBuyNow}
-                      className="bg-[#0c0b45] text-white w-full sm:w-auto px-6 md:px-12 py-2 md:py-3 rounded font-medium hover:bg-gray-900 transition-colors text-sm md:text-base"
+                      disabled={isOutOfStock}
+                      className="bg-[#0c0b45] text-white w-full sm:w-auto px-6 md:px-12 py-2 md:py-3 rounded font-medium hover:bg-gray-900 transition-colors text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Buy Now
+                      {isOutOfStock ? "Out of Stock" : "Buy Now"}
                     </button>
                     <button
                       onClick={handleAddToCart}
                       disabled={
-                        actionLoading.cart && loadingProductId === product._id
+                        isOutOfStock ||
+                        (actionLoading.cart && loadingProductId === product._id)
                       }
-                      className="border border-[#0c0b45] text-[#0c0b45] w-full sm:w-auto px-6 md:px-12 py-2 md:py-3 rounded font-medium hover:bg-gray-200 transition-colors text-sm md:text-base"
+                      className="border border-[#0c0b45] text-[#0c0b45] w-full sm:w-auto px-6 md:px-12 py-2 md:py-3 rounded font-medium hover:bg-gray-200 transition-colors text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {actionLoading.cart && loadingProductId === product._id
                         ? "Adding..."
+                        : isOutOfStock
+                        ? "Out of Stock"
                         : "Add to Cart"}
                     </button>
                   </div>
                 </div>
 
-                <div className="border-t pt-3 md:pt-5">
+                <div className="border-t border-gray-300 pt-3 md:pt-5">
                   <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3">
                     Specifications
                   </h3>

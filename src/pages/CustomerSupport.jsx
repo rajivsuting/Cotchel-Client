@@ -475,6 +475,8 @@ const CustomerSupport = () => {
                         <span>
                           {new Date(inq.createdAt).toLocaleDateString()}
                         </span>
+                        <span>•</span>
+                        <span className="text-gray-400">ID: {inq._id}</span>
                       </div>
                       <div className="text-gray-700 text-sm line-clamp-2">
                         {inq.message}

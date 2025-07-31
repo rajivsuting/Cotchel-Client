@@ -239,6 +239,8 @@ const EditProduct = () => {
       Number(form.quantityAvailable) < 1
     )
       errors.quantityAvailable = "Valid quantity is required";
+    if (!form.lotSize || isNaN(form.lotSize) || Number(form.lotSize) < 1)
+      errors.lotSize = "Lot size is required";
     if (!form.length || isNaN(form.length) || Number(form.length) < 0)
       errors.length = "Valid length is required";
     if (!form.breadth || isNaN(form.breadth) || Number(form.breadth) < 0)
@@ -575,6 +577,7 @@ const EditProduct = () => {
               name="price"
               value={form.price}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.price && (
@@ -592,6 +595,7 @@ const EditProduct = () => {
               name="compareAtPrice"
               value={form.compareAtPrice}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.compareAtPrice && (
@@ -609,6 +613,7 @@ const EditProduct = () => {
               name="quantityAvailable"
               value={form.quantityAvailable}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.quantityAvailable && (
@@ -619,13 +624,14 @@ const EditProduct = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Lot Size
+              Lot Size *
             </label>
             <input
               type="number"
               name="lotSize"
               value={form.lotSize}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.lotSize && (
@@ -648,6 +654,7 @@ const EditProduct = () => {
               name="length"
               value={form.length}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.length && (
@@ -665,6 +672,7 @@ const EditProduct = () => {
               name="breadth"
               value={form.breadth}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.breadth && (
@@ -682,6 +690,7 @@ const EditProduct = () => {
               name="height"
               value={form.height}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.height && (
@@ -699,6 +708,7 @@ const EditProduct = () => {
               name="weight"
               value={form.weight}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.weight && (

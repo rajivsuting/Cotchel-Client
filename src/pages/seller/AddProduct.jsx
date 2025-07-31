@@ -223,6 +223,8 @@ const AddProduct = () => {
       Number(form.quantityAvailable) < 1
     )
       errors.quantityAvailable = "Valid quantity is required";
+    if (!form.lotSize || isNaN(form.lotSize) || Number(form.lotSize) < 1)
+      errors.lotSize = "Lot size is required";
     if (!form.length || isNaN(form.length) || Number(form.length) < 0)
       errors.length = "Valid length is required";
     if (!form.breadth || isNaN(form.breadth) || Number(form.breadth) < 0)
@@ -564,6 +566,7 @@ const AddProduct = () => {
               name="price"
               value={form.price}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min={0}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
@@ -582,6 +585,7 @@ const AddProduct = () => {
               name="compareAtPrice"
               value={form.compareAtPrice}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min={0}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
@@ -600,6 +604,7 @@ const AddProduct = () => {
               name="quantityAvailable"
               value={form.quantityAvailable}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min={1}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
@@ -618,9 +623,14 @@ const AddProduct = () => {
               name="lotSize"
               value={form.lotSize}
               onChange={handleChange}
-              min={1}
+              onWheel={(e) => e.target.blur()}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
+            {validationErrors.lotSize && (
+              <div className="text-red-500 text-xs mt-1">
+                {validationErrors.lotSize}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -631,6 +641,7 @@ const AddProduct = () => {
               name="length"
               value={form.length}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min={0}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
@@ -649,6 +660,7 @@ const AddProduct = () => {
               name="breadth"
               value={form.breadth}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min={0}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
@@ -667,6 +679,7 @@ const AddProduct = () => {
               name="height"
               value={form.height}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min={0}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
@@ -685,6 +698,7 @@ const AddProduct = () => {
               name="weight"
               value={form.weight}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               min={0}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />

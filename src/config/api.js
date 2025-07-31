@@ -1,7 +1,7 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
+  // "https://starfish-app-6q6ot.ondigitalocean.app/api";
   "https://starfish-app-6q6ot.ondigitalocean.app/api";
-// "http://localhost:5000/api";
 
 export const API = {
   // Auth endpoints
@@ -70,6 +70,8 @@ export const API = {
     VERIFY_PAYMENT: `${API_BASE_URL}/orders/razorpay-webhook`,
     ALL: `${API_BASE_URL}/orders`,
     GET: (id) => `${API_BASE_URL}/orders/${id}`,
+    GET_BY_PAYMENT: (paymentTransactionId) =>
+      `${API_BASE_URL}/orders/payment/${paymentTransactionId}`,
     CANCEL: (id) => `${API_BASE_URL}/orders/${id}/cancel`,
   },
   // Address endpoints

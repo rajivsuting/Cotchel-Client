@@ -86,12 +86,18 @@ const Home = () => {
   const [categoriesError, setCategoriesError] = useState(null);
 
   const abortControllerRef = useRef(null);
+  const dataFetchedRef = useRef(false);
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const dispatch = useDispatch();
 
   // Memoized fetch data function
   const fetchData = useCallback(async () => {
+    // Skip if data has already been fetched
+    if (dataFetchedRef.current) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -126,6 +132,9 @@ const Home = () => {
       // Handle product data
       const productsData = productsResponse.data?.products || [];
       setFeaturedProducts(Array.isArray(productsData) ? productsData : []);
+
+      // Mark data as fetched
+      dataFetchedRef.current = true;
     } catch (error) {
       if (error.name === "AbortError") {
         console.log("Request was aborted");
@@ -139,6 +148,13 @@ const Home = () => {
       setLoading(false);
     }
   }, []);
+
+  // Function to reset cache and refetch data
+  const resetCacheAndFetch = useCallback(() => {
+    dataFetchedRef.current = false;
+    setError(null);
+    fetchData();
+  }, [fetchData]);
 
   // Memoized wishlist fetch
   const fetchWishlist = useCallback(async () => {
@@ -305,7 +321,7 @@ const Home = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">{error}</h2>
           <button
-            onClick={fetchData}
+            onClick={resetCacheAndFetch}
             className="bg-[#0D0B46] text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
           >
             Try Again

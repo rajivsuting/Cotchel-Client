@@ -13,24 +13,32 @@ const OrderHistory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const fetchOrders = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`${API.ORDERS.ALL}?page=${page}`);
+      setOrders(response.data.orders);
+      setTotalPages(response.data.pagination.totalPages);
+      setCurrentPage(page);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      const errorMessage = handleApiError(err);
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get(API.ORDERS.ALL);
-        setOrders(response.data.orders);
-        setTotalPages(response.data.pagination.totalPages);
-      } catch (err) {
-        console.error("Error fetching orders:", err);
-        const errorMessage = handleApiError(err);
-        setError(errorMessage);
-        toast.error(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrders();
-  }, []);
+    fetchOrders(currentPage);
+  }, [currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
@@ -71,7 +79,7 @@ const OrderHistory = () => {
       <div className="text-center py-8">
         <h2 className="text-2xl font-semibold text-gray-900 mb-4">{error}</h2>
         <button
-          onClick={() => fetchOrders()}
+          onClick={() => fetchOrders(currentPage)}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#0D0B46] hover:bg-[#23206a]"
         >
           Try Again
@@ -139,15 +147,25 @@ const OrderHistory = () => {
                       key={product.productId}
                       className="flex items-center gap-4"
                     >
-                      <img
-                        src={product.featuredImage || "/placeholder.png"}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
+                      <Link
+                        to={`/product/${product.productId}`}
+                        className="flex-shrink-0"
+                      >
+                        <img
+                          src={product.featuredImage || "/placeholder.png"}
+                          alt={product.name}
+                          className="w-16 h-16 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
+                        />
+                      </Link>
                       <div>
-                        <h4 className="text-sm font-medium text-gray-900">
-                          {product.name}
-                        </h4>
+                        <Link
+                          to={`/product/${product.productId}`}
+                          className="block"
+                        >
+                          <h4 className="text-sm font-medium text-gray-900 hover:text-[#0D0B46] transition-colors">
+                            {product.name}
+                          </h4>
+                        </Link>
                         <p className="text-sm text-gray-500">
                           Qty: {product.quantity}
                         </p>
@@ -180,7 +198,7 @@ const OrderHistory = () => {
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-8">
               <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
                 disabled={currentPage === 1}
                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -191,7 +209,7 @@ const OrderHistory = () => {
               </span>
               <button
                 onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  handlePageChange(Math.min(currentPage + 1, totalPages))
                 }
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"

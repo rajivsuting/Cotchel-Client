@@ -82,7 +82,20 @@ const Wishlist = () => {
 
         const { count } = extractCartData(cartResponse);
         dispatch(setCartCount(count));
-        toast.success("Item added to cart successfully");
+
+        // Remove item from wishlist after successfully adding to cart
+        try {
+          await api.post(API.WISHLIST.REMOVE, { productId });
+          dispatch(
+            setWishlistItems(
+              wishlistItems.filter((item) => item.productId._id !== productId)
+            )
+          );
+          toast.success("Item moved to cart");
+        } catch (wishlistError) {
+          console.error("Error removing from wishlist:", wishlistError);
+          toast.success("Item added to cart successfully");
+        }
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -155,7 +168,7 @@ const Wishlist = () => {
             return (
               <div
                 key={item._id}
-                className="border border-gray-200 rounded-xl bg-white p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow"
+                className="border border-gray-200 rounded-xl bg-white p-4 sm:p-6 "
               >
                 {/* Mobile Layout */}
                 <div className="block sm:hidden">
@@ -192,9 +205,17 @@ const Wishlist = () => {
                               </span>
                             )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {item.productId.stock > 0
-                            ? `${item.productId.stock} in stock`
+                        <p
+                          className={`text-xs mt-1 ${
+                            item.productId.quantityAvailable >=
+                            (item.productId.lotSize || 1)
+                              ? "text-gray-500"
+                              : "text-red-500 font-medium"
+                          }`}
+                        >
+                          {item.productId.quantityAvailable >=
+                          (item.productId.lotSize || 1)
+                            ? `${item.productId.quantityAvailable} in stock`
                             : "Out of stock"}
                         </p>
                       </div>
@@ -202,11 +223,8 @@ const Wishlist = () => {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="text-xs text-gray-500 space-y-1">
+                    <div className="text-xs text-gray-500">
                       <p>Lot Size: {item.productId.lotSize || 1}</p>
-                      {item.productId.category && (
-                        <p>Category: {item.productId.category}</p>
-                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -253,10 +271,6 @@ const Wishlist = () => {
                     </Link>
 
                     <div className="mt-2 space-y-2">
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {item.productId.description}
-                      </p>
-
                       <div className="flex items-center gap-4">
                         <div className="flex items-baseline gap-2">
                           <span className="text-lg font-semibold text-gray-900">
@@ -270,18 +284,23 @@ const Wishlist = () => {
                               </span>
                             )}
                         </div>
-                        <span className="text-sm text-gray-500">
-                          {item.productId.stock > 0
-                            ? `${item.productId.stock} in stock`
+                        <span
+                          className={`text-sm ${
+                            item.productId.quantityAvailable >=
+                            (item.productId.lotSize || 1)
+                              ? "text-gray-500"
+                              : "text-red-500 font-medium"
+                          }`}
+                        >
+                          {item.productId.quantityAvailable >=
+                          (item.productId.lotSize || 1)
+                            ? `${item.productId.quantityAvailable} in stock`
                             : "Out of stock"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <span>Lot Size: {item.productId.lotSize || 1}</span>
-                        {item.productId.category && (
-                          <span>Category: {item.productId.category}</span>
-                        )}
                       </div>
                     </div>
                   </div>

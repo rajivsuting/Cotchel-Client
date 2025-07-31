@@ -20,7 +20,7 @@ import {
 const OrderConfirmation = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const [order, setOrder] = useState(null);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -33,8 +33,22 @@ const OrderConfirmation = () => {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      const response = await api.get(API.ORDERS.GET(orderId));
-      setOrder(response.data.order);
+
+      // First, get the single order to extract paymentTransactionId
+      const singleOrderResponse = await api.get(API.ORDERS.GET(orderId));
+      const singleOrder = singleOrderResponse.data.order;
+
+      if (!singleOrder.paymentTransactionId) {
+        // If no paymentTransactionId, just show the single order
+        setOrders([singleOrder]);
+        return;
+      }
+
+      // Now fetch all orders with the same paymentTransactionId
+      const allOrdersResponse = await api.get(
+        API.ORDERS.GET_BY_PAYMENT(singleOrder.paymentTransactionId)
+      );
+      setOrders(allOrdersResponse.data.orders);
     } catch (error) {
       console.error("Error fetching order details:", error);
       setError("Failed to load order details");
@@ -82,7 +96,7 @@ const OrderConfirmation = () => {
     return <LoadingState />;
   }
 
-  if (error || !order) {
+  if (error || !orders.length) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -135,9 +149,14 @@ const OrderConfirmation = () => {
                     Order #{orderId}
                   </h2>
                   <p className="text-blue-100">
-                    Placed on {formatDate(order.createdAt)} at{" "}
-                    {formatTime(order.createdAt)}
+                    Placed on {formatDate(orders[0]?.createdAt)} at{" "}
+                    {formatTime(orders[0]?.createdAt)}
                   </p>
+                  {orders.length > 1 && (
+                    <p className="text-blue-100 text-sm mt-1">
+                      {orders.length} orders from {orders.length} sellers
+                    </p>
+                  )}
                 </div>
                 <div className="mt-4 sm:mt-0">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -156,35 +175,42 @@ const OrderConfirmation = () => {
                   Order Items
                 </h3>
                 <div className="space-y-4">
-                  {order.products.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
-                    >
-                      <img
-                        src={
-                          item.featuredImage ||
-                          item.images?.[0] ||
-                          "/placeholder.png"
-                        }
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">
-                          {item.name}
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          Quantity: {item.quantity} × ₹{item.price}
-                        </p>
+                  {orders.flatMap((order, orderIndex) =>
+                    order.products.map((item, itemIndex) => (
+                      <div
+                        key={`${orderIndex}-${itemIndex}`}
+                        className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                      >
+                        <img
+                          src={
+                            item.featuredImage ||
+                            item.images?.[0] ||
+                            "/placeholder.png"
+                          }
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">
+                            {item.name}
+                          </h4>
+                          <p className="text-sm text-gray-500">
+                            Quantity: {item.quantity} × ₹{item.price}
+                          </p>
+                          {orders.length > 1 && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Seller: {order.seller?.name || "Unknown Seller"}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-900">
+                            ₹{item.totalPrice.toFixed(2)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">
-                          ₹{item.totalPrice.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -196,7 +222,12 @@ const OrderConfirmation = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
-                    <span>₹{order.totalPrice.toFixed(2)}</span>
+                    <span>
+                      ₹
+                      {orders
+                        .reduce((sum, order) => sum + order.totalPrice, 0)
+                        .toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Shipping</span>
@@ -209,7 +240,12 @@ const OrderConfirmation = () => {
                   <div className="border-t border-gray-200 pt-3">
                     <div className="flex justify-between text-lg font-semibold">
                       <span>Total</span>
-                      <span>₹{order.totalPrice.toFixed(2)}</span>
+                      <span>
+                        ₹
+                        {orders
+                          .reduce((sum, order) => sum + order.totalPrice, 0)
+                          .toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -231,16 +267,16 @@ const OrderConfirmation = () => {
               </div>
               <div className="space-y-2 text-gray-600">
                 <p className="font-medium text-gray-900">
-                  {order.address.name}
+                  {orders[0]?.address?.name}
                 </p>
-                <p>{order.address.phone}</p>
+                <p>{orders[0]?.address?.phone}</p>
                 <p>
-                  {order.address.street}, {order.address.city}
+                  {orders[0]?.address?.street}, {orders[0]?.address?.city}
                 </p>
                 <p>
-                  {order.address.state} {order.address.pincode}
+                  {orders[0]?.address?.state} {orders[0]?.address?.pincode}
                 </p>
-                <p>{order.address.country}</p>
+                <p>{orders[0]?.address?.country}</p>
               </div>
             </div>
 
@@ -262,10 +298,10 @@ const OrderConfirmation = () => {
                   <span className="font-medium">Payment Status:</span>{" "}
                   <span className="text-green-600 font-medium">Paid</span>
                 </p>
-                {order.paymentTransactionId && (
+                {orders[0]?.paymentTransactionId && (
                   <p>
                     <span className="font-medium">Transaction ID:</span>{" "}
-                    {order.paymentTransactionId}
+                    {orders[0]?.paymentTransactionId}
                   </p>
                 )}
               </div>

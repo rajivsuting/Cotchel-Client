@@ -34,6 +34,21 @@ const Checkout = () => {
   // Get cart from Redux state
   const reduxCartItems = useSelector((state) => state.cart.items);
 
+  // Helper function to filter in-stock items and validate cart
+  const processCartItems = (items) => {
+    const inStockItems = items.filter(
+      (item) => item.productId.quantityAvailable >= item.quantity * item.lotSize
+    );
+
+    if (inStockItems.length === 0) {
+      toast.error("All items in your cart are out of stock");
+      navigate("/cart");
+      return null;
+    }
+
+    return inStockItems;
+  };
+
   useEffect(() => {
     const addressId = location.state?.addressId;
     const from = location.state?.from;
@@ -69,14 +84,18 @@ const Checkout = () => {
 
         if (addressResponse.data?.data) {
           setSelectedAddress(addressResponse.data.data);
-          // Create cart object from Redux data
+          // Filter out out-of-stock items and create cart object from Redux data
+          const inStockItems = reduxCartItems.filter(
+            (item) => item.productId.quantityAvailable >= item.lotSize
+          );
+
           const cartData = {
-            items: reduxCartItems,
-            subtotal: reduxCartItems.reduce(
+            items: inStockItems,
+            subtotal: inStockItems.reduce(
               (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),
-            totalPrice: reduxCartItems.reduce(
+            totalPrice: inStockItems.reduce(
               (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),
@@ -103,7 +122,23 @@ const Checkout = () => {
           return;
         }
 
-        setCart(cartResponse.data.data);
+        // Process cart items to filter out out-of-stock items
+        const processedItems = processCartItems(cartResponse.data.data.items);
+        if (!processedItems) return; // processCartItems handles navigation
+
+        const processedCartData = {
+          ...cartResponse.data.data,
+          items: processedItems,
+          subtotal: processedItems.reduce(
+            (sum, item) => sum + item.price * item.quantity * item.lotSize,
+            0
+          ),
+          totalPrice: processedItems.reduce(
+            (sum, item) => sum + item.price * item.quantity * item.lotSize,
+            0
+          ),
+        };
+        setCart(processedCartData);
 
         // Fetch address after verifying cart
         const addressResponse = await api.get(
@@ -148,14 +183,18 @@ const Checkout = () => {
 
         if (addressResponse.data?.data) {
           setSelectedAddress(addressResponse.data.data);
-          // Create cart object from Redux data
+          // Filter out out-of-stock items and create cart object from Redux data
+          const inStockItems = reduxCartItems.filter(
+            (item) => item.productId.quantityAvailable >= item.lotSize
+          );
+
           const cartData = {
-            items: reduxCartItems,
-            subtotal: reduxCartItems.reduce(
+            items: inStockItems,
+            subtotal: inStockItems.reduce(
               (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),
-            totalPrice: reduxCartItems.reduce(
+            totalPrice: inStockItems.reduce(
               (sum, item) => sum + item.price * item.quantity * item.lotSize,
               0
             ),

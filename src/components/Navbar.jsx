@@ -809,21 +809,12 @@ const Navbar = () => {
 
           {/* Right Icons */}
           <div className="flex items-center gap-1 sm:gap-2 md:gap-5">
-            {(!isAuthenticated() || (user && !user.isVerifiedSeller)) && (
+            {(!isAuthenticated() || (user && !user.sellerDetails)) && (
               <button
                 type="button"
                 className="hidden md:flex items-center text-white  px-4 py-2 rounded-md font-semibold shadow-md hover:shadow-lg transition-all text-sm cursor-pointer"
                 onClick={() => {
-                  if (
-                    isAuthenticated() &&
-                    user &&
-                    user.sellerDetails &&
-                    user.isVerifiedSeller === false
-                  ) {
-                    navigate("/seller-verification");
-                  } else {
-                    navigate("/become-seller");
-                  }
+                  navigate("/become-seller");
                 }}
               >
                 <span>Become a Seller</span>
@@ -1526,23 +1517,13 @@ const Navbar = () => {
             </div>
 
             {/* Become a Seller (Mobile Menu) */}
-            {(!isAuthenticated() ||
-              (user && user.isVerifiedSeller === false)) && (
+            {(!isAuthenticated() || (user && !user.sellerDetails)) && (
               <div className="mt-6 px-4">
                 <button
                   type="button"
                   className="w-full bg-[#0D0B46] text-white hover:bg-[#23206a] py-2.5 px-4 rounded-lg font-medium shadow-md transition-all text-center cursor-pointer block"
                   onClick={() => {
-                    if (
-                      isAuthenticated() &&
-                      user &&
-                      user.sellerDetails &&
-                      user.isVerifiedSeller === false
-                    ) {
-                      navigate("/seller-verification");
-                    } else {
-                      navigate("/become-seller");
-                    }
+                    navigate("/become-seller");
                     setIsMobileMenuOpen(false);
                   }}
                 >
