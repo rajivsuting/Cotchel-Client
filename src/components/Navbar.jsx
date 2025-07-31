@@ -49,6 +49,7 @@ const Navbar = () => {
   const [hoveredCat, setHoveredCat] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileCategoriesOpen, setIsMobileCategoriesOpen] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
@@ -67,6 +68,7 @@ const Navbar = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [mobileOpenCategory, setMobileOpenCategory] = useState(null);
   const searchRef = useRef(null);
   const menuRef = useRef(null);
   const categoriesRef = useRef(null);
@@ -321,17 +323,20 @@ const Navbar = () => {
         setIsSearchActive(false);
       }
 
-      // Handle mobile menu
+      // Handle mobile menu - but don't close if clicking on categories inside
       if (
         menuRef.current &&
         !menuRef.current.contains(event.target) &&
         isMobileMenuOpen
       ) {
         setIsMobileMenuOpen(false);
+        setIsMobileCategoriesOpen(false);
+        setMobileOpenCategory(null);
       }
 
-      // Handle categories dropdown
+      // Handle categories dropdown - only for desktop, not mobile menu
       if (
+        !isMobileMenuOpen && // Only handle categories dropdown outside clicks when mobile menu is closed
         categoriesRef.current &&
         !categoriesRef.current.contains(event.target) &&
         !categoriesButtonRef.current?.contains(event.target) &&
@@ -344,7 +349,7 @@ const Navbar = () => {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMobileMenuOpen, isCategoriesOpen]);
+  }, [isMobileMenuOpen, isCategoriesOpen, isMobileCategoriesOpen]);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -362,6 +367,8 @@ const Navbar = () => {
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
     setIsCategoriesOpen(false);
+    setIsMobileCategoriesOpen(false);
+    setMobileOpenCategory(null);
   };
 
   // Toggle mobile search
@@ -1337,17 +1344,20 @@ const Navbar = () => {
               <div className="py-1">
                 <button
                   className="w-full text-left py-2.5 px-4 text-[#0D0B46] hover:bg-gray-50 rounded-lg flex items-center justify-between font-medium cursor-pointer"
-                  onClick={toggleCategories}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMobileCategoriesOpen(!isMobileCategoriesOpen);
+                  }}
                 >
                   <span>Categories</span>
                   <BsChevronDown
                     className={`transition-transform duration-300 ${
-                      isCategoriesOpen ? "rotate-180" : ""
+                      isMobileCategoriesOpen ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
-                {isCategoriesOpen && (
+                {isMobileCategoriesOpen && (
                   <div className="mt-1 pl-4 space-y-0.5 animate-fadeIn">
                     {categoriesLoading ? (
                       <div className="px-4 py-2 text-gray-500">
@@ -1362,10 +1372,15 @@ const Navbar = () => {
                             <Link
                               to={`/category/${category.name.toLowerCase()}`}
                               className="block py-2 px-4 text-[#0D0B46] hover:bg-gray-50 rounded-lg font-medium flex-1"
-                              onClick={() => {
-                                setIsCategoriesOpen(false);
-                                setHoveredCat(null);
-                                setIsMobileMenuOpen(false);
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Only navigate if clicking on the text, not the chevron
+                                if (!e.target.closest("button")) {
+                                  setIsMobileCategoriesOpen(false);
+                                  setHoveredCat(null);
+                                  setMobileOpenCategory(null);
+                                  setIsMobileMenuOpen(false);
+                                }
                               }}
                             >
                               {category.name}
@@ -1374,14 +1389,19 @@ const Navbar = () => {
                               category.subCategories.length > 0 && (
                                 <button
                                   onClick={(e) => {
+                                    e.preventDefault();
                                     e.stopPropagation();
-                                    handleCategoryHover(category._id);
+                                    setMobileOpenCategory(
+                                      mobileOpenCategory === category._id
+                                        ? null
+                                        : category._id
+                                    );
                                   }}
                                   className="p-2 text-gray-500 hover:text-[#0D0B46]"
                                 >
                                   <BsChevronDown
                                     className={`transition-transform duration-300 ${
-                                      hoveredCat === category._id
+                                      mobileOpenCategory === category._id
                                         ? "rotate-180"
                                         : ""
                                     }`}
@@ -1391,16 +1411,18 @@ const Navbar = () => {
                           </div>
                           {Array.isArray(category.subCategories) &&
                             category.subCategories.length > 0 &&
-                            hoveredCat === category._id && (
+                            mobileOpenCategory === category._id && (
                               <div className="pl-4 mt-1">
                                 {category.subCategories.map((subCategory) => (
                                   <Link
                                     key={subCategory._id}
                                     to={`/category/${category.name.toLowerCase()}/${subCategory.name.toLowerCase()}`}
                                     className="block py-1.5 px-4 text-gray-600 hover:text-[#0D0B46] hover:bg-gray-50 rounded-lg text-sm"
-                                    onClick={() => {
-                                      setIsCategoriesOpen(false);
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIsMobileCategoriesOpen(false);
                                       setHoveredCat(null);
+                                      setMobileOpenCategory(null);
                                       setIsMobileMenuOpen(false);
                                     }}
                                   >
@@ -1569,27 +1591,6 @@ const Navbar = () => {
           </div>
         </div>
       </div>
-
-      {/* Animation Styles */}
-      {/* <style>{`
-        .rotate-180 {
-          transform: rotate(180deg);
-        }
-        .rotate-270 {
-          transform: rotate(-90deg);
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-in-out;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style> */}
-      {/* <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style> */}
     </nav>
   );
 };
