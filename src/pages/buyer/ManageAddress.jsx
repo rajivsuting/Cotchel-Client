@@ -561,23 +561,23 @@ const ManageAddress = () => {
           <div key={address._id}>
             <div className="border border-gray-200 rounded-xl bg-white p-4 relative">
               <div className="flex justify-between items-start">
-                <div className="space-y-1 flex-1 pr-8">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium text-gray-900">
+                <div className="space-y-1 flex-1 pr-8 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="font-medium text-gray-900 break-words">
                       {address.name}
                     </div>
                     {address.isDefault && (
-                      <span className="px-2 py-0.5 text-xs font-medium bg-[#0D0B46]/10 text-[#0D0B46] rounded-full">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-[#0D0B46]/10 text-[#0D0B46] rounded-full flex-shrink-0">
                         Default
                       </span>
                     )}
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 break-words">
                     {address.addressLine1}
                     {address.addressLine2 && `, ${address.addressLine2}`}
                     {`, ${address.city}, ${address.state} - ${address.postalCode}, ${address.country}`}
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 break-words">
                     Phone: {address.phone}
                   </div>
                 </div>
