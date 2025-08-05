@@ -231,7 +231,7 @@ const Cart = () => {
   const calculateSubtotal = () => {
     return items.reduce((total, item) => {
       // Only include items that are in stock
-      if (item.productId.quantityAvailable >= item.lotSize) {
+      if (item.productId.quantityAvailable >= item.quantity * item.lotSize) {
         return total + item.price * item.quantity * item.lotSize;
       }
       return total;
