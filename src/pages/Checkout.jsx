@@ -293,6 +293,19 @@ const Checkout = () => {
             } catch (error) {
               console.error("Payment verification failed:", error);
               toast.error(handleApiError(error));
+
+              // Handle payment failure - restore cart and redirect
+              try {
+                await api.post(API.ORDERS.CANCEL_PAYMENT, {
+                  orderId: orderData.orderId,
+                  reason: "Payment verification failed",
+                });
+                toast.info("Order cancelled, items returned to cart");
+                navigate("/cart");
+              } catch (cancelError) {
+                console.error("Error cancelling order:", cancelError);
+                toast.error("Failed to cancel order. Please contact support.");
+              }
             }
           },
           prefill: {
@@ -302,6 +315,27 @@ const Checkout = () => {
           },
           theme: {
             color: "#0c0b45",
+          },
+          modal: {
+            ondismiss: async function () {
+              // Handle when user closes the payment modal
+              console.log("Payment modal dismissed by user");
+              try {
+                await api.post(API.ORDERS.CANCEL_PAYMENT, {
+                  orderId: orderData.orderId,
+                  reason: "Payment modal closed by user",
+                });
+                toast.info("Order cancelled, items returned to cart");
+                navigate("/cart");
+              } catch (error) {
+                console.error("Error cancelling order:", error);
+                toast.error("Failed to cancel order. Please contact support.");
+              }
+            },
+          },
+          notes: {
+            address: "Cotchel Order",
+            order_id: orderData.orderId,
           },
         };
 

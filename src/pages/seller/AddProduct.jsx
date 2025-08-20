@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../../services/apiService";
 import { API } from "../../config/api";
-import { ChevronDown } from "lucide-react";
+import {
+  ChevronDown,
+  FileText,
+  FileSpreadsheet,
+  FileImage,
+  File,
+  X,
+} from "lucide-react";
 
 const initialState = {
   title: "",
@@ -33,6 +40,51 @@ const uploadFiles = async (endpoint, files, fieldName = "images") => {
     withCredentials: true,
   });
   return response.data;
+};
+
+// Helper to get file type icon
+const getFileIcon = (fileName) => {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+
+  switch (extension) {
+    case "pdf":
+      return <FileText className="w-5 h-5 text-red-500" />;
+    case "xls":
+    case "xlsx":
+    case "csv":
+      return <FileSpreadsheet className="w-5 h-5 text-green-600" />;
+    case "doc":
+    case "docx":
+      return <FileText className="w-5 h-5 text-blue-600" />;
+    case "ppt":
+    case "pptx":
+      return <FileImage className="w-5 h-5 text-orange-500" />;
+    default:
+      return <File className="w-5 h-5 text-gray-500" />;
+  }
+};
+
+// Helper to get file type label
+const getFileTypeLabel = (fileName) => {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+
+  switch (extension) {
+    case "pdf":
+      return "PDF Document";
+    case "xls":
+    case "xlsx":
+      return "Excel Spreadsheet";
+    case "csv":
+      return "CSV File";
+    case "doc":
+    case "docx":
+      return "Word Document";
+    case "ppt":
+    case "pptx":
+      return "PowerPoint Presentation";
+    default:
+      return "Document";
+  }
 };
 
 const AddProduct = () => {
@@ -243,40 +295,61 @@ const AddProduct = () => {
       errors.featuredImage = "Featured image is required";
     if (form.images.length > 10)
       errors.images = "Maximum 10 other images allowed";
+
+    // Check if images are File objects before validation (for new uploads)
     if (
       form.images.some(
-        (img) => img instanceof File && img.size > 2 * 1024 * 1024
+        (img) =>
+          img &&
+          typeof img === "object" &&
+          img instanceof File &&
+          img.size > 2 * 1024 * 1024
       )
     )
       errors.images = "Each image must be under 2MB";
     if (
       form.images.some(
         (img) =>
-          img instanceof File && !["image/jpeg", "image/png"].includes(img.type)
+          img &&
+          typeof img === "object" &&
+          img instanceof File &&
+          !["image/jpeg", "image/png"].includes(img.type)
       )
     )
       errors.images = "Only JPG/PNG images allowed";
+
+    // Check if featured image is File object before validation (for new uploads)
     if (
       form.featuredImage &&
+      typeof form.featuredImage === "object" &&
       form.featuredImage instanceof File &&
       form.featuredImage.size > 2 * 1024 * 1024
     )
       errors.featuredImage = "Featured image must be under 2MB";
     if (
       form.featuredImage &&
+      typeof form.featuredImage === "object" &&
       form.featuredImage instanceof File &&
       !["image/jpeg", "image/png"].includes(form.featuredImage.type)
     )
       errors.featuredImage = "Featured image must be JPG or PNG";
+
+    // Check if files are File objects before validation (for new uploads)
     if (
       form.files.some(
-        (file) => file instanceof File && file.size > 5 * 1024 * 1024
+        (file) =>
+          file &&
+          typeof file === "object" &&
+          file instanceof File &&
+          file.size > 5 * 1024 * 1024
       )
     )
       errors.files = "Each file must be under 5MB";
     if (
       form.files.some(
         (file) =>
+          file &&
+          typeof file === "object" &&
           file instanceof File &&
           ![
             "application/vnd.ms-excel",
@@ -291,6 +364,7 @@ const AddProduct = () => {
       )
     )
       errors.files = "Invalid file type for attachments";
+
     console.log("Validation errors:", errors, form);
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -312,7 +386,7 @@ const AddProduct = () => {
       const { files, ...rest } = form;
       const payload = {
         ...rest,
-        fileAttachments: files,
+        files: files, // Send as 'files' to match server expectation
         price: Number(form.price),
         compareAtPrice: form.compareAtPrice
           ? Number(form.compareAtPrice)
@@ -324,7 +398,8 @@ const AddProduct = () => {
         height: Number(form.height),
         weight: Number(form.weight),
       };
-      console.log(payload);
+      console.log("Payload being sent:", payload);
+      console.log("Files in payload:", payload.files);
       await api.post(API.PRODUCTS.ALL, payload);
       setSuccess("Product added successfully!");
       setForm(initialState);
@@ -568,6 +643,7 @@ const AddProduct = () => {
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
               min={0}
+              step="0.01"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {validationErrors.price && (
@@ -587,6 +663,7 @@ const AddProduct = () => {
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
               min={0}
+              step="0.01"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {validationErrors.compareAtPrice && (
@@ -643,6 +720,7 @@ const AddProduct = () => {
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
               min={0}
+              step="0.01"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {validationErrors.length && (
@@ -662,6 +740,7 @@ const AddProduct = () => {
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
               min={0}
+              step="0.01"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {validationErrors.breadth && (
@@ -681,6 +760,7 @@ const AddProduct = () => {
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
               min={0}
+              step="0.01"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {validationErrors.height && (
@@ -700,6 +780,7 @@ const AddProduct = () => {
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
               min={0}
+              step="0.01"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {validationErrors.weight && (
@@ -965,7 +1046,7 @@ const AddProduct = () => {
         </h3>
         <div className="mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            File Attachments (xls, csv, pdf, doc, etc)
+            File Attachments (PDF, Excel, Word, PowerPoint, CSV)
           </label>
           <div
             className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
@@ -996,8 +1077,26 @@ const AddProduct = () => {
             <div className="text-gray-500 mb-2">
               Drag & drop files here or click to select
             </div>
-            <div className="text-xs text-gray-400">
-              XLS, CSV, PDF, DOC, DOCX, PPT, PPTX only
+            <div className="text-xs text-gray-400 mb-3">
+              Supported formats: PDF, XLS/XLSX, CSV, DOC/DOCX, PPT/PPTX
+            </div>
+            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+              <div className="flex items-center gap-1">
+                <FileText className="w-4 h-4 text-red-500" />
+                <span>PDF</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                <span>Excel</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span>Word</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <FileImage className="w-4 h-4 text-orange-500" />
+                <span>PowerPoint</span>
+              </div>
             </div>
             <input
               id="file-attachments-input"
@@ -1008,16 +1107,30 @@ const AddProduct = () => {
               className="hidden"
             />
           </div>
-          <ul className="mt-2">
+          <ul className="mt-2 space-y-2">
             {form.files.map((file, idx) => (
-              <li key={idx} className="flex items-center gap-2">
-                <span>{file.name}</span>
+              <li
+                key={idx}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div className="flex items-center gap-3">
+                  {getFileIcon(file.name || file)}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900">
+                      {file.name || file}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {getFileTypeLabel(file.name || file)}
+                    </span>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => removeFile(idx)}
-                  className="text-red-500"
+                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                  title="Remove file"
                 >
-                  Remove
+                  <X className="w-4 h-4" />
                 </button>
               </li>
             ))}

@@ -152,6 +152,7 @@ const RegisterContent = () => {
   const [touched, setTouched] = useState({
     password: false,
     confirmPassword: false,
+    phone: false,
   });
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [googleUser, setGoogleUser] = useState(null);
@@ -187,7 +188,7 @@ const RegisterContent = () => {
         errs.fullName = "Name cannot contain special characters or numbers";
       else if (form.fullName.trim().length > 40)
         errs.fullName = "Name cannot exceed 40 characters";
-      if (!form.phone.trim()) errs.phone = "Phone is required";
+      if (!form.phone.trim()) errs.phone = "Phone number is required";
       else if (!/^[6-9]\d{9}$/.test(form.phone))
         errs.phone =
           "Please enter a valid 10-digit phone number starting with 6-9";
@@ -198,15 +199,50 @@ const RegisterContent = () => {
     return Object.keys(errs).length === 0;
   };
 
+  // Phone validation function
+  const validatePhone = (phone) => {
+    if (!phone) return "Phone number is required";
+    if (!/^[6-9]\d{9}$/.test(phone))
+      return "Please enter a valid 10-digit phone number starting with 6-9";
+    return "";
+  };
+
   // Handlers
   const handleChange = (e) => {
     if (e.target.name !== "otp") {
-      setForm({ ...form, [e.target.name]: e.target.value });
-      setErrors({ ...errors, [e.target.name]: undefined });
-      if (e.target.name === "password" || e.target.name === "confirmPassword") {
-        setTouched((prev) => ({ ...prev, [e.target.name]: true }));
+      const { name, value } = e.target;
+      let newValue = value;
+
+      // Special handling for phone number
+      if (name === "phone") {
+        // Only allow digits and limit to 10 characters
+        newValue = value.replace(/\D/g, "").slice(0, 10);
+      }
+
+      setForm({ ...form, [name]: newValue });
+      setErrors({ ...errors, [name]: undefined });
+
+      if (
+        name === "password" ||
+        name === "confirmPassword" ||
+        name === "phone"
+      ) {
+        setTouched((prev) => ({ ...prev, [name]: true }));
+      }
+
+      // Real-time validation for phone
+      if (name === "phone") {
+        const phoneError = validatePhone(newValue);
+        if (phoneError) {
+          setErrors((prev) => ({ ...prev, phone: phoneError }));
+        }
       }
     }
+  };
+
+  const handlePhoneBlur = (e) => {
+    const phoneError = validatePhone(form.phone);
+    setErrors((prev) => ({ ...prev, phone: phoneError }));
   };
 
   const handleNext = async (e) => {
@@ -271,6 +307,16 @@ const RegisterContent = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Mark all required fields as touched before validation
+    setTouched((prev) => ({
+      ...prev,
+      fullName: true,
+      phone: true,
+      dob: true,
+      gender: true,
+    }));
+
     if (!validateStep()) return;
     setSubmitting(true);
     try {
@@ -621,12 +667,17 @@ const RegisterContent = () => {
                       name="fullName"
                       value={form.fullName}
                       onChange={handleChange}
+                      onBlur={() =>
+                        setTouched((prev) => ({ ...prev, fullName: true }))
+                      }
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
-                        errors.fullName ? "ring-2 ring-red-400" : ""
+                        errors.fullName && touched.fullName
+                          ? "ring-2 ring-red-400"
+                          : ""
                       }`}
                       maxLength={40}
                     />
-                    {errors.fullName && (
+                    {errors.fullName && touched.fullName && (
                       <p className="text-xs text-red-500 mt-1">
                         {errors.fullName}
                       </p>
@@ -644,19 +695,18 @@ const RegisterContent = () => {
                       pattern="[0-9]*"
                       maxLength={10}
                       placeholder="Enter 10-digit phone number starting with 6-9"
-                      onChange={(e) => {
-                        // Only allow digits and limit to 10 characters
-                        const value = e.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 10);
-                        setForm({ ...form, phone: value });
-                        setErrors({ ...errors, phone: undefined });
+                      onChange={handleChange}
+                      onBlur={(e) => {
+                        setTouched((prev) => ({ ...prev, phone: true }));
+                        handlePhoneBlur(e);
                       }}
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
-                        errors.phone ? "ring-2 ring-red-400" : ""
+                        errors.phone && touched.phone
+                          ? "ring-2 ring-red-400"
+                          : ""
                       }`}
                     />
-                    {errors.phone && (
+                    {errors.phone && touched.phone && (
                       <p className="text-xs text-red-500 mt-1">
                         {errors.phone}
                       </p>
@@ -671,11 +721,14 @@ const RegisterContent = () => {
                       name="dob"
                       value={form.dob}
                       onChange={handleChange}
+                      onBlur={() =>
+                        setTouched((prev) => ({ ...prev, dob: true }))
+                      }
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
-                        errors.dob ? "ring-2 ring-red-400" : ""
+                        errors.dob && touched.dob ? "ring-2 ring-red-400" : ""
                       }`}
                     />
-                    {errors.dob && (
+                    {errors.dob && touched.dob && (
                       <p className="text-xs text-red-500 mt-1">{errors.dob}</p>
                     )}
                   </div>
@@ -687,8 +740,13 @@ const RegisterContent = () => {
                       name="gender"
                       value={form.gender}
                       onChange={handleChange}
+                      onBlur={() =>
+                        setTouched((prev) => ({ ...prev, gender: true }))
+                      }
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0D0B46] bg-gray-100 ${
-                        errors.gender ? "ring-2 ring-red-400" : ""
+                        errors.gender && touched.gender
+                          ? "ring-2 ring-red-400"
+                          : ""
                       }`}
                     >
                       <option value="">Select Gender</option>
@@ -696,7 +754,7 @@ const RegisterContent = () => {
                       <option value="Female">Female</option>
                       <option value="Other">Other</option>
                     </select>
-                    {errors.gender && (
+                    {errors.gender && touched.gender && (
                       <p className="text-xs text-red-500 mt-1">
                         {errors.gender}
                       </p>

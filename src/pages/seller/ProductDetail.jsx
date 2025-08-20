@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import Swal from "sweetalert2";
 
 const themeColor = "#0c0b45";
 
@@ -24,6 +25,126 @@ const SellerProductDetail = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
+
+  // Handler functions
+  const handleToggleActive = async () => {
+    try {
+      const result = await Swal.fire({
+        title: `Are you sure?`,
+        text: `Do you want to ${
+          product.isActive ? "deactivate" : "activate"
+        } this product?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: `Yes, ${
+          product.isActive ? "deactivate" : "activate"
+        } it!`,
+        cancelButtonText: "Cancel",
+        customClass: {
+          popup: "w-72 p-4 bg-gray-100 rounded-lg shadow-lg",
+          icon: "w-12 h-12",
+          title: "text-lg font-bold text-gray-800",
+          htmlContainer: "text-sm text-gray-600",
+          actions: "flex justify-center gap-5",
+          confirmButton: "bg-[#0c0b45] text-white py-2 px-4 rounded-lg",
+          cancelButton:
+            "bg-gray-200 text-[#0c0b45] py-2 px-4 rounded-lg hover:bg-gray-300",
+        },
+        buttonsStyling: false,
+      });
+
+      if (result.isConfirmed) {
+        const response = await api.put(API.PRODUCTS.UPDATE(product._id), {
+          isActive: !product.isActive,
+        });
+
+        setProduct((prev) => ({ ...prev, isActive: !prev.isActive }));
+
+        Swal.fire({
+          title: "Success!",
+          text: `Product ${
+            product.isActive ? "deactivated" : "activated"
+          } successfully.`,
+          icon: "success",
+          timer: 2000,
+          customClass: {
+            popup: "w-72 p-4 bg-gray-100 rounded-lg shadow-lg",
+            title: "text-lg font-bold text-gray-800",
+            htmlContainer: "text-sm text-gray-600",
+          },
+          showConfirmButton: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling product status:", error);
+      Swal.fire({
+        title: "Error!",
+        text: "Failed to update product status.",
+        icon: "error",
+        customClass: {
+          popup: "w-72 p-4 bg-gray-100 rounded-lg shadow-lg",
+          title: "text-lg font-bold text-gray-800",
+          htmlContainer: "text-sm text-gray-600",
+        },
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const result = await Swal.fire({
+        title: "Are you sure?",
+        text: "Do you want to delete this product? This action cannot be undone.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, delete it!",
+        cancelButtonText: "Cancel",
+        customClass: {
+          popup: "w-72 p-4 bg-gray-100 rounded-lg shadow-lg",
+          icon: "w-12 h-12",
+          title: "text-lg font-bold text-gray-800",
+          htmlContainer: "text-sm text-gray-600",
+          actions: "flex justify-center gap-5",
+          confirmButton:
+            "bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700",
+          cancelButton:
+            "bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300",
+        },
+        buttonsStyling: false,
+      });
+
+      if (result.isConfirmed) {
+        await api.delete(API.PRODUCTS.DELETE(product._id));
+
+        Swal.fire({
+          title: "Deleted!",
+          text: "Product has been deleted successfully.",
+          icon: "success",
+          timer: 2000,
+          customClass: {
+            popup: "w-72 p-4 bg-gray-100 rounded-lg shadow-lg",
+            title: "text-lg font-bold text-gray-800",
+            htmlContainer: "text-sm text-gray-600",
+          },
+          showConfirmButton: false,
+        });
+
+        navigate("/seller/dashboard/products");
+      }
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      Swal.fire({
+        title: "Error!",
+        text: "Failed to delete product.",
+        icon: "error",
+        customClass: {
+          popup: "w-72 p-4 bg-gray-100 rounded-lg shadow-lg",
+          title: "text-lg font-bold text-gray-800",
+          htmlContainer: "text-sm text-gray-600",
+        },
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -127,7 +248,18 @@ const SellerProductDetail = () => {
     );
   }
 
-  const allImages = [product.featuredImage, ...(product.images || [])];
+  const allImages = [product.featuredImage, ...(product.images || [])].filter(
+    Boolean
+  );
+
+  // Check if product has required fields
+  const hasImages = allImages.length > 0;
+  const hasDescription =
+    product.description && product.description.trim().length > 0;
+  const hasHighlights =
+    product.keyHighLights && product.keyHighLights.length > 0;
+  const hasAttachments =
+    product.fileAttachments && product.fileAttachments.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -154,7 +286,7 @@ const SellerProductDetail = () => {
           <div className="flex space-x-3">
             {/* Seller actions: edit, activate/deactivate, delete */}
             <button
-              onClick={() => {}}
+              onClick={handleToggleActive}
               className={`flex items-center px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors duration-200 ${
                 product.isActive
                   ? "bg-green-600 text-white hover:bg-green-700"
@@ -170,7 +302,7 @@ const SellerProductDetail = () => {
             </button>
             <button
               onClick={() =>
-                navigate(`/seller/dashboard/products/edit/${product._id}`)
+                navigate(`/seller/dashboard/products/${product._id}/edit`)
               }
               className="flex items-center px-4 py-2 text-white rounded-md hover:bg-blue-900 text-sm font-medium shadow-sm transition-colors duration-200"
               style={{ backgroundColor: themeColor }}
@@ -179,7 +311,7 @@ const SellerProductDetail = () => {
               Edit
             </button>
             <button
-              onClick={() => {}}
+              onClick={handleDelete}
               className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium shadow-sm transition-colors duration-200"
             >
               <Trash2 size={18} className="mr-2" />
@@ -199,33 +331,60 @@ const SellerProductDetail = () => {
                 Images
               </h2>
               <div className="space-y-4">
-                <div className="relative overflow-hidden rounded-md border border-gray-200 shadow-sm">
-                  <img
-                    src={allImages[selectedImage]}
-                    alt={product.title}
-                    className="w-full h-64 object-cover transition-transform duration-300 hover:scale-105"
-                  />
-                </div>
-                <div className="flex space-x-2 overflow-x-auto pb-2">
-                  {allImages.map((img, index) => (
-                    <div key={index} className="relative flex-shrink-0">
+                {hasImages ? (
+                  <>
+                    <div className="relative overflow-hidden rounded-md border border-gray-200 shadow-sm">
                       <img
-                        src={img}
-                        alt={`${product.title} ${index + 1}`}
-                        className={`w-20 h-20 object-cover rounded-md border cursor-pointer transition-all duration-200 ${
-                          selectedImage === index
-                            ? `border-2 shadow-md`
-                            : "border-gray-200 hover:shadow-md"
-                        }`}
-                        style={{
-                          borderColor:
-                            selectedImage === index ? themeColor : undefined,
-                        }}
-                        onClick={() => setSelectedImage(index)}
+                        src={allImages[selectedImage]}
+                        alt={product.title}
+                        className="w-full h-64 object-cover transition-transform duration-300 hover:scale-105"
                       />
                     </div>
-                  ))}
-                </div>
+                    <div className="flex space-x-2 overflow-x-auto pb-2">
+                      {allImages.map((img, index) => (
+                        <div key={index} className="relative flex-shrink-0">
+                          <img
+                            src={img}
+                            alt={`${product.title} ${index + 1}`}
+                            className={`w-20 h-20 object-cover rounded-md border cursor-pointer transition-all duration-200 ${
+                              selectedImage === index
+                                ? `border-2 shadow-md`
+                                : "border-gray-200 hover:shadow-md"
+                            }`}
+                            style={{
+                              borderColor:
+                                selectedImage === index
+                                  ? themeColor
+                                  : undefined,
+                            }}
+                            onClick={() => setSelectedImage(index)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-64 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center">
+                    <div className="text-center text-gray-500">
+                      <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-8 h-8 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-sm">No images available</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -294,26 +453,67 @@ const SellerProductDetail = () => {
                   <label className="text-sm font-medium text-gray-700">
                     Lot Size
                   </label>
-                  <p className="mt-1 text-gray-600">{product.lotSize}</p>
+                  <p className="mt-1 text-gray-600">
+                    {product.lotSize
+                      ? `${product.lotSize} units per lot`
+                      : "Not specified"}
+                  </p>
                 </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Dimensions & Weight
-                </label>
-                <p className="mt-1 text-gray-600">
-                  {product.dimensions?.length} x {product.dimensions?.breadth} x{" "}
-                  {product.dimensions?.height} cm, {product.dimensions?.weight}{" "}
-                  kg
-                </p>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <p className="mt-1">
+                    <span
+                      className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        product.isActive
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {product.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </p>
+                </div>
+                {product.length && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Length
+                    </label>
+                    <p className="mt-1 text-gray-600">{product.length} cm</p>
+                  </div>
+                )}
+                {product.breadth && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Breadth
+                    </label>
+                    <p className="mt-1 text-gray-600">{product.breadth} cm</p>
+                  </div>
+                )}
+                {product.height && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Height
+                    </label>
+                    <p className="mt-1 text-gray-600">{product.height} cm</p>
+                  </div>
+                )}
+                {product.weight && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Weight
+                    </label>
+                    <p className="mt-1 text-gray-600">{product.weight} kg</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Additional Sections */}
           <div className="mt-8 space-y-8 border-t border-gray-200 pt-8">
-            {product.description && (
+            {hasDescription && (
               <div>
                 <h2
                   className="text-lg font-semibold"
@@ -327,7 +527,7 @@ const SellerProductDetail = () => {
               </div>
             )}
 
-            {product.keyHighLights?.length > 0 && (
+            {hasHighlights && (
               <div>
                 <h2
                   className="text-lg font-semibold"
@@ -349,7 +549,7 @@ const SellerProductDetail = () => {
               </div>
             )}
 
-            {product.fileAttachments?.length > 0 && (
+            {hasAttachments && (
               <div>
                 <h2
                   className="text-lg font-semibold"
@@ -377,6 +577,53 @@ const SellerProductDetail = () => {
                 </div>
               </div>
             )}
+
+            {/* Additional Product Information */}
+            <div>
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: themeColor }}
+              >
+                Additional Information
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    SKU
+                  </label>
+                  <p className="mt-1 text-gray-600 font-mono">
+                    {product.sku || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Created
+                  </label>
+                  <p className="mt-1 text-gray-600">
+                    {new Date(product.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Rating
+                  </label>
+                  <p className="mt-1 text-gray-600">
+                    {product.ratings
+                      ? `${product.ratings.toFixed(1)} ★`
+                      : "No ratings yet"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Total Reviews
+                  </label>
+                  <p className="mt-1 text-gray-600">
+                    {product.reviewsCount || product.reviews?.length || 0}{" "}
+                    reviews
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

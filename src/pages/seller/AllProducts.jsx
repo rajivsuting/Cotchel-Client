@@ -147,17 +147,15 @@ const SellerStock = () => {
           title: "text-lg font-bold text-gray-800",
           htmlContainer: "text-sm text-gray-600",
           actions: "flex justify-center gap-5",
-          confirmButton: "bg-primary text-white py-2 px-4 rounded-lg",
+          confirmButton: "bg-[#0c0b45] text-white py-2 px-4 rounded-lg",
           cancelButton:
-            "bg-gray-200 text-primary py-2 px-4 rounded-lg hover:bg-gray-300",
+            "bg-gray-200 text-[#0c0b45] py-2 px-4 rounded-lg hover:bg-gray-300",
         },
         buttonsStyling: false,
       });
 
       if (result.isConfirmed) {
-        const response = await api.delete(
-          `${API.PRODUCTS.DELETE}/${productId}`
-        );
+        const response = await api.delete(API.PRODUCTS.DELETE(productId));
         setProducts((prevProducts) =>
           prevProducts.filter((product) => product._id !== productId)
         );

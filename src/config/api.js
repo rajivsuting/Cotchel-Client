@@ -37,6 +37,9 @@ export const API = {
     SEARCH: `${API_BASE_URL}/products/search`,
     SUGGESTIONS: `${API_BASE_URL}/products/suggestions`,
     ENHANCED_SUGGESTIONS: `${API_BASE_URL}/products/enhanced-suggestions`,
+    DELETE: (id) => `${API_BASE_URL}/products/delete/${id}`,
+    CREATE: `${API_BASE_URL}/products`,
+    UPDATE: (id) => `${API_BASE_URL}/products/${id}`,
   },
   // Banner endpoints
   BANNERS: {
@@ -73,6 +76,8 @@ export const API = {
     GET_BY_PAYMENT: (paymentTransactionId) =>
       `${API_BASE_URL}/orders/payment/${paymentTransactionId}`,
     CANCEL: (id) => `${API_BASE_URL}/orders/${id}/cancel`,
+    CANCEL_PAYMENT: `${API_BASE_URL}/orders/cancel-payment`,
+    TEST_RESTORE_STOCK: `${API_BASE_URL}/orders/test-restore-stock`,
   },
   // Address endpoints
   ADDRESS: {

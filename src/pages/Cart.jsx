@@ -166,7 +166,16 @@ const Cart = () => {
   }, [isAuthenticated, navigate]);
 
   const handleQuantityChange = async (productId, newQuantity) => {
-    if (newQuantity < 1) return;
+    console.log("Quantity change attempt:", {
+      productId,
+      newQuantity,
+      currentQuantity: items.find((item) => item.productId._id === productId)
+        ?.quantity,
+    });
+    if (newQuantity < 1) {
+      console.log("Blocked: newQuantity < 1");
+      return;
+    }
 
     // Find the current item to get product details
     const currentItem = items.find((item) => item.productId._id === productId);
