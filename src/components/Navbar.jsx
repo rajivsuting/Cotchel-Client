@@ -15,6 +15,7 @@ import {
   FaUserPlus,
   FaMapMarkerAlt,
 } from "react-icons/fa";
+import { FiLogOut } from "react-icons/fi";
 import {
   BsSearch,
   BsCart3,
@@ -1535,6 +1536,21 @@ const Navbar = () => {
                     </p>
                   )}
                 </>
+              )}
+
+              {/* Logout Button (Mobile Only) */}
+              {isAuthenticated() && (
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                    navigate("/login");
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-4"
+                >
+                  <FiLogOut className="w-4 h-4" />
+                  <span className="text-sm font-medium">Logout</span>
+                </button>
               )}
             </div>
 
