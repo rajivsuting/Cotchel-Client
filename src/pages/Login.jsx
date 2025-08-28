@@ -153,7 +153,7 @@ const LoginForm = () => {
             return;
           }
           toast.success("Google login successful!");
-          const from = location.state?.from?.pathname || "/";
+          const from = location.state?.from || "/";
           navigate(from, { replace: true });
         } else {
           toast.error(result.data.message || "Google login failed");
@@ -204,7 +204,7 @@ const LoginForm = () => {
       console.log(result);
       if (result.success) {
         toast.success("Login successful!");
-        const from = location.state?.from?.pathname || "/";
+        const from = location.state?.from || "/";
         navigate(from, { replace: true });
       } else {
         const msg = "Enter valid username and password";
@@ -233,7 +233,7 @@ const LoginForm = () => {
           onComplete={() => {
             setShowCompleteProfile(false);
             toast.success("Profile completed successfully!");
-            const from = location.state?.from?.pathname || "/";
+            const from = location.state?.from || "/";
             navigate(from, { replace: true });
           }}
         />

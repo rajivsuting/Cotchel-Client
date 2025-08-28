@@ -376,7 +376,7 @@ const SellerDashboard = () => {
         </div>
         <div className="p-4 border-t border-gray-200 bg-gray-50">
           <button
-            onClick={() => navigate("/stock")}
+            onClick={() => navigate("/seller/dashboard/products")}
             style={{ color: themeColor }}
             className="text-sm font-medium hover:underline"
           >

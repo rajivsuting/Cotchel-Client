@@ -1141,13 +1141,22 @@ const AddProduct = () => {
             </div>
           )}
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-[#0c0b45] text-white rounded-lg font-semibold hover:bg-[#14136a] transition-colors disabled:opacity-50"
-        >
-          {loading ? "Adding..." : "Add Product"}
-        </button>
+        <div className="flex gap-4 pt-4">
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg border border-gray-300 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 bg-[#0c0b45] text-white py-3 px-6 rounded-lg hover:bg-[#14136a] focus:outline-none focus:ring-2 focus:ring-[#0c0b45] focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {loading ? "Adding..." : "Add Product"}
+          </button>
+        </div>
       </form>
     </div>
   );

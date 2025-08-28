@@ -298,7 +298,7 @@ const ProductDetail = () => {
 
   const handleBuyNow = async () => {
     if (!isAuthenticated()) {
-      toast.info("Please sign in to continue");
+      // Redirect to login without showing any toast or error
       navigate("/login", { state: { from: `/product/${id}` } });
       return;
     }
@@ -401,7 +401,7 @@ const ProductDetail = () => {
       setLoadingProductId(product._id);
 
       if (!isAuthenticated()) {
-        toast.info("Please sign in to add items to cart");
+        // Redirect to login without showing any toast or error
         navigate("/login", { state: { from: `/product/${id}` } });
         return;
       }
@@ -438,7 +438,7 @@ const ProductDetail = () => {
       setActionLoading((prev) => ({ ...prev, wishlist: true }));
 
       if (!isAuthenticated()) {
-        toast.info("Please sign in to manage wishlist");
+        // Redirect to login without showing any toast or error
         navigate("/login", { state: { from: `/product/${id}` } });
         return;
       }
@@ -467,7 +467,7 @@ const ProductDetail = () => {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!isAuthenticated()) {
-      toast.info("Please sign in to write a review");
+      // Redirect to login without showing any toast or error
       navigate("/login", { state: { from: `/product/${id}` } });
       return;
     }
@@ -1396,7 +1396,7 @@ const ProductDetail = () => {
                       )}
                       onAddToCart={async () => {
                         if (!isAuthenticated()) {
-                          toast.info("Please sign in to add items to cart");
+                          // Redirect to login without showing any toast or error
                           navigate("/login", {
                             state: { from: `/product/${id}` },
                           });
@@ -1424,7 +1424,7 @@ const ProductDetail = () => {
                       }}
                       onAddToWishlist={async () => {
                         if (!isAuthenticated()) {
-                          toast.info("Please sign in to manage wishlist");
+                          // Redirect to login without showing any toast or error
                           navigate("/login", {
                             state: { from: `/product/${id}` },
                           });

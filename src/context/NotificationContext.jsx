@@ -103,12 +103,23 @@ export const NotificationProvider = ({ children }) => {
     if (!user) return;
 
     try {
+      console.log("Marking notification as read:", notificationId);
+      console.log(
+        "API endpoint:",
+        API.NOTIFICATIONS.MARK_AS_READ(notificationId)
+      );
+
       const response = await api.patch(
         API.NOTIFICATIONS.MARK_AS_READ(notificationId),
         {}
       );
 
+      console.log("Mark as read response:", response);
+
       if (response.data.success) {
+        console.log(
+          "Successfully marked notification as read, updating local state"
+        );
         setNotifications((prevNotifications) =>
           prevNotifications.map((notification) =>
             notification._id === notificationId
@@ -117,9 +128,13 @@ export const NotificationProvider = ({ children }) => {
           )
         );
         setUnreadCount((prev) => Math.max(0, prev - 1));
+        console.log("Local state updated successfully");
+      } else {
+        console.error("Mark as read failed:", response.data);
       }
     } catch (error) {
       console.error("Error marking notification as read:", error);
+      console.error("Error details:", error.response?.data);
       setError(error.message);
     }
   };
@@ -128,9 +143,17 @@ export const NotificationProvider = ({ children }) => {
     if (!user) return;
 
     try {
+      console.log("Marking all notifications as read");
+      console.log("API endpoint:", API.NOTIFICATIONS.MARK_ALL_AS_READ);
+
       const response = await api.patch(API.NOTIFICATIONS.MARK_ALL_AS_READ, {});
 
+      console.log("Mark all as read response:", response);
+
       if (response.data.success) {
+        console.log(
+          "Successfully marked all notifications as read, updating local state"
+        );
         setNotifications((prevNotifications) =>
           prevNotifications.map((notification) => ({
             ...notification,
@@ -138,9 +161,13 @@ export const NotificationProvider = ({ children }) => {
           }))
         );
         setUnreadCount(0);
+        console.log("Local state updated successfully");
+      } else {
+        console.error("Mark all as read failed:", response.data);
       }
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
+      console.error("Error details:", error.response?.data);
       setError(error.message);
     }
   };

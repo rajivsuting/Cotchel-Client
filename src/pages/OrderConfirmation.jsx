@@ -197,6 +197,14 @@ const OrderConfirmation = () => {
                           <p className="text-sm text-gray-500">
                             Quantity: {item.quantity} × ₹{item.price}
                           </p>
+                          <p className="text-sm text-gray-500">
+                            Lot Size: {item.lotSize}
+                          </p>
+                          {item.lotSize && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Lot Size: {item.lotSize}
+                            </p>
+                          )}
                           {orders.length > 1 && (
                             <p className="text-xs text-gray-400 mt-1">
                               Seller: {order.seller?.name || "Unknown Seller"}
