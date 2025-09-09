@@ -9,8 +9,8 @@ import ProductCard from "../components/ProductCard";
 import LoadingState from "../components/LoadingState";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { toast } from "react-hot-toast";
-import { API, handleApiError } from "../config/api";
-import api from "../services/apiService";
+import { API } from "../config/api";
+import api, { handleApiError } from "../services/apiService";
 import { useAuth } from "../context/AuthContext";
 import { useDispatch } from "react-redux";
 import { setCartCount, setCartItems } from "../redux/slices/cartSlice";
@@ -244,7 +244,13 @@ const Home = () => {
         }
       } catch (error) {
         console.error("Error adding to cart:", error);
-        if (error.response?.status === 401) {
+        // Check for authentication errors (401, 403) or if the error message indicates auth issues
+        if (
+          error.response?.status === 401 ||
+          error.response?.status === 403 ||
+          error.message?.includes("Authentication required") ||
+          error.message?.includes("Please log in")
+        ) {
           toast.info("Please sign in to add items to cart");
           navigate("/login", { state: { from: "/" } });
         } else {
@@ -289,7 +295,13 @@ const Home = () => {
         });
       } catch (error) {
         console.error("Error updating wishlist:", error);
-        if (error.response?.status === 401) {
+        // Check for authentication errors (401, 403) or if the error message indicates auth issues
+        if (
+          error.response?.status === 401 ||
+          error.response?.status === 403 ||
+          error.message?.includes("Authentication required") ||
+          error.message?.includes("Please log in")
+        ) {
           toast.info("Please sign in to manage wishlist");
           navigate("/login", { state: { from: "/" } });
         } else {

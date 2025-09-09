@@ -195,21 +195,20 @@ const OrderConfirmation = () => {
                             {item.name}
                           </h4>
                           <p className="text-sm text-gray-500">
-                            Quantity: {item.quantity} × ₹{item.price}
+                            Price: {item.price}
                           </p>
                           <p className="text-sm text-gray-500">
-                            Lot Size: {item.lotSize}
+                            Quantity: {item.quantity} × {item.lotSize}
                           </p>
-                          {item.lotSize && (
-                            <p className="text-xs text-gray-400 mt-1">
-                              Lot Size: {item.lotSize}
-                            </p>
-                          )}
-                          {orders.length > 1 && (
-                            <p className="text-xs text-gray-400 mt-1">
-                              Seller: {order.seller?.name || "Unknown Seller"}
-                            </p>
-                          )}
+                          {/* <p className="text-sm text-gray-500">
+                            Lot Size: 
+                          </p> */}
+                          <p className="text-xs text-gray-400 mt-1">
+                            Seller:{" "}
+                            {order.seller?.businessName ||
+                              order.seller?.personalName ||
+                              "Unknown Seller"}
+                          </p>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-gray-900">

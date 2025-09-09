@@ -357,26 +357,31 @@ const OrderDetails = () => {
         </h2>
         <div className="bg-gray-50 p-4 rounded-lg">
           <p className="text-sm font-medium text-gray-900">
-            {order.seller.businessName || order.seller.name}
+            {order.seller.businessName ||
+              order.seller.personalName ||
+              "Unknown Seller"}
           </p>
           <p className="text-sm text-gray-600 mt-1">{order.seller.email}</p>
-          <p className="text-sm text-gray-600">Phone: {order.seller.phone}</p>
-          {order.seller.address && (
+          <p className="text-sm text-gray-600">
+            Phone: {order.seller.phone || "Not provided"}
+          </p>
+          {order.seller.businessDetails?.address && (
             <div className="mt-3 pt-3 border-t border-gray-200">
               <p className="text-sm text-gray-600">
-                {order.seller.address.addressLine1}
+                {order.seller.businessDetails.address.addressLine1}
               </p>
-              {order.seller.address.addressLine2 && (
+              {order.seller.businessDetails.address.addressLine2 && (
                 <p className="text-sm text-gray-600">
-                  {order.seller.address.addressLine2}
+                  {order.seller.businessDetails.address.addressLine2}
                 </p>
               )}
               <p className="text-sm text-gray-600">
-                {order.seller.address.city}, {order.seller.address.state} -{" "}
-                {order.seller.address.postalCode}
+                {order.seller.businessDetails.address.city},{" "}
+                {order.seller.businessDetails.address.state} -{" "}
+                {order.seller.businessDetails.address.postalCode}
               </p>
               <p className="text-sm text-gray-600">
-                {order.seller.address.country}
+                {order.seller.businessDetails.address.country}
               </p>
             </div>
           )}

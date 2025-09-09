@@ -59,8 +59,11 @@ const SellerDashboard = () => {
           stats: data.stats.map((stat) => ({
             ...stat,
             value:
-              stat.title === "Today's Sales"
-                ? `₹${(stat.value || 0).toLocaleString()}`
+              stat.title === "Today's Sales" || stat.title === "Total Sales"
+                ? `₹${(stat.value || 0).toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`
                 : stat.value || 0,
           })),
           recentOrders: data.recentOrders.map((order) => ({

@@ -671,6 +671,17 @@ const ProductDetail = () => {
 
   return (
     <ErrorBoundary>
+      <style>
+        {`
+          .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}
+      </style>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-[95%] sm:max-w-[90%] md:max-w-[85%] lg:max-w-6xl 2xl:max-w-7xl mx-auto px-2 sm:px-4 py-8">
           <section className="w-full">
@@ -765,7 +776,7 @@ const ProductDetail = () => {
               </div>
 
               {/* Right: Product Details */}
-              <div className="w-full lg:w-[52%] lg:pl-4 mt-4 lg:mt-0">
+              <div className="w-full lg:w-[52%] lg:pl-4 mt-4 lg:mt-0 lg:max-h-[600px] lg:overflow-y-auto lg:pr-2 hide-scrollbar">
                 <h1 className="text-2xl md:text-3xl font-semibold mb-2 md:mb-3 flex items-center gap-3">
                   {product.title}
                   <button
@@ -959,382 +970,210 @@ const ProductDetail = () => {
                     <div className="col-span-2">{product.model}</div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </section>
 
-          <section className="w-full mt-12">
-            {/* Tab Navigation */}
-            <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto flex justify-between mb-10 overflow-x-auto flex-nowrap md:overflow-x-visible md:flex-wrap">
-              <button
-                className={`px-6 py-2 mr-4 border-b-2 2xl:text-[24px] xl:text-[18px] font-medium ${
-                  activeTab === "description"
-                    ? "border-[#0c0b45]"
-                    : "border-transparent"
-                }`}
-                onClick={() => handleTabChange("description")}
-              >
-                Description
-              </button>
-              <button
-                className={`px-6 py-2 mr-4 border-b-2 2xl:text-[24px] xl:text-[18px] font-medium ${
-                  activeTab === "specification"
-                    ? "border-[#0c0b45]"
-                    : "border-transparent"
-                }`}
-                onClick={() => handleTabChange("specification")}
-              >
-                Attachments
-              </button>
-              <button
-                className={`px-6 py-2 border-b-2 2xl:text-[24px] xl:text-[18px] font-medium ${
-                  activeTab === "reviews"
-                    ? "border-[#0c0b45]"
-                    : "border-transparent"
-                }`}
-                onClick={() => handleTabChange("reviews")}
-              >
-                Reviews
-              </button>
-            </div>
+                {/* Product Description */}
+                <div className="border-t border-gray-300 pt-3 md:pt-5">
+                  <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3">
+                    Description
+                  </h3>
+                  {product.description ? (
+                    <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+                      {product.description}
+                    </p>
+                  ) : (
+                    <p className="text-xs md:text-sm text-gray-500 italic">
+                      No description available.
+                    </p>
+                  )}
+                </div>
 
-            {/* Tab Content */}
-            {activeTab === "description" && (
-              <div className="w-full max-w-2xl text-center mt-8 mx-auto px-2">
-                {product.description ? (
-                  <p className="text-[#191919] 2xl:text-[18px] xl:text-[14px]">
-                    {product.description}
-                  </p>
-                ) : (
-                  <p className="text-[#191919] 2xl:text-[18px] xl:text-[14px]">
-                    No description available.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {activeTab === "specification" && (
-              <div className="w-full max-w-lg bg-white p-6 mt-10 mx-auto px-2">
-                {product.fileAttachments &&
-                product.fileAttachments.length > 0 ? (
-                  <ul className="space-y-3">
-                    {product.fileAttachments.map((file, index) => {
-                      const fileName = file
-                        .split("/")
-                        .pop()
-                        .split("_")
-                        .slice(1)
-                        .join("_");
-                      return (
-                        <li
-                          key={index}
-                          className="flex items-center justify-between bg-gray-100 p-3 rounded-lg hover:bg-gray-200 transition"
-                        >
-                          <span className="truncate max-w-[70%] text-gray-700">
-                            {fileName}
-                          </span>
-                          <a
-                            href={file}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 px-3 py-1 text-[#0c0b45] rounded-lg hover:text-gray-900 hover:underline transition"
+                {/* File Attachments */}
+                <div className="border-t border-gray-300 pt-3 md:pt-5">
+                  <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3">
+                    Attachments
+                  </h3>
+                  {product.fileAttachments &&
+                  product.fileAttachments.length > 0 ? (
+                    <div className="space-y-2">
+                      {product.fileAttachments.map((file, index) => {
+                        const fileName = file
+                          .split("/")
+                          .pop()
+                          .split("_")
+                          .slice(1)
+                          .join("_");
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
                           >
-                            View
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-gray-600 text-center">
-                    No specifications available.
-                  </p>
-                )}
-              </div>
-            )}
+                            <span className="text-xs md:text-sm text-gray-700 truncate flex-1">
+                              {fileName}
+                            </span>
+                            <a
+                              href={file}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-2 px-2 py-1 text-xs text-[#0c0b45] bg-white border border-[#0c0b45] rounded hover:bg-[#0c0b45] hover:text-white transition-colors"
+                            >
+                              View
+                            </a>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs md:text-sm text-gray-500 italic">
+                      No attachments available.
+                    </p>
+                  )}
+                </div>
 
-            {activeTab === "reviews" && (
-              <div className="w-full max-w-4xl mx-auto bg-white rounded-lg overflow-hidden">
-                {/* Ratings Summary Section */}
-                <div className="border-b border-gray-200">
-                  <div className="flex flex-col md:flex-row">
-                    {/* Left side - Average rating */}
-                    <div className="flex flex-col items-center p-6 border-r border-gray-200 md:w-1/3 bg-gray-50">
-                      <div className="text-5xl font-bold text-[#0c0b45] mb-2">
-                        {averageRating}
-                      </div>
-                      <div className="flex my-2">
+                {/* Customer Reviews Summary */}
+                <div className="border-t border-gray-300 pt-3 md:pt-5">
+                  <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3">
+                    Customer Reviews
+                  </h3>
+
+                  {/* Rating Summary */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="text-2xl md:text-3xl font-bold text-[#0c0b45]">
+                      {averageRating}
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex">
                         {[...Array(5)].map((_, i) => {
                           const ratingValue = i + 1;
                           return (
-                            <span key={i} className="mx-0.5">
+                            <span key={i} className="mr-0.5">
                               {averageRating >= ratingValue ? (
-                                <FaStar className="text-[#2e8e00] w-5 h-5" />
+                                <FaStar className="text-[#2e8e00] w-3 h-3 md:w-4 md:h-4" />
                               ) : averageRating >= ratingValue - 0.5 ? (
-                                <FaStarHalfAlt className="text-[#2e8e00] w-5 h-5" />
+                                <FaStarHalfAlt className="text-[#2e8e00] w-3 h-3 md:w-4 md:h-4" />
                               ) : (
-                                <FaRegStar className="text-gray-300 w-5 h-5" />
+                                <FaRegStar className="text-gray-300 w-3 h-3 md:w-4 md:h-4" />
                               )}
                             </span>
                           );
                         })}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        Based on {totalReviews} reviews
-                      </div>
-                    </div>
-
-                    {/* Right side - Rating distribution */}
-                    <div className="p-6 md:w-2/3">
-                      {[5, 4, 3, 2, 1].map((rating, index) => {
-                        const count = ratingDistribution[index];
-                        const percentage =
-                          totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-
-                        return (
-                          <div key={index} className="flex items-center mb-3">
-                            <div className="flex items-center w-12">
-                              <span className="font-medium text-gray-700">
-                                {rating}
-                              </span>
-                              <FaStar className="text-[#2e8e00] w-3 h-3 ml-1" />
-                            </div>
-                            <div className="w-full h-2 bg-gray-200 rounded-full mx-2 overflow-hidden">
-                              <div
-                                className={`h-2 rounded-full ${
-                                  percentage > 60
-                                    ? "bg-[#2e8e00]"
-                                    : "bg-[#a2c500]"
-                                }`}
-                                style={{ width: `${percentage}%` }}
-                              ></div>
-                            </div>
-                            <div className="w-12 text-xs text-gray-500 font-medium">
-                              {count}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      <span className="text-xs text-gray-600">
+                        {totalReviews} reviews
+                      </span>
                     </div>
                   </div>
-                </div>
 
-                {/* Inline Write Review Form */}
-                <div className="p-6 border-b border-gray-200">
+                  {/* Rating Distribution */}
+                  <div className="space-y-1">
+                    {[5, 4, 3, 2, 1].map((rating, index) => {
+                      const count = ratingDistribution[index];
+                      const percentage =
+                        totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                      return (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="text-xs text-gray-600 w-3">
+                            {rating}
+                          </span>
+                          <FaStar className="text-[#2e8e00] w-2 h-2" />
+                          <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-1.5 rounded-full bg-[#0c0b45]"
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-gray-500 w-6">
+                            {count}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Write Review Button */}
                   {isAuthenticated() ? (
                     userReview ? (
-                      <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center gap-3">
-                          <MdCheckCircle className="text-blue-600 text-xl" />
-                          <div>
-                            <h3 className="font-medium text-blue-900">
-                              You have already reviewed this product
-                            </h3>
-                            <p className="text-sm text-blue-700 mt-1">
-                              Thank you for your feedback! You can only review
-                              each product once.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : canReview ? (
-                      <form onSubmit={handleReviewSubmit} className="mb-4">
-                        <h2 className="text-lg font-bold mb-4 text-gray-900">
-                          Write a Review
-                        </h2>
-                        <div className="mb-4">
-                          <label className="block mb-2 font-medium text-gray-700">
-                            Rating *
-                          </label>
-                          <div className="flex gap-2">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <button
-                                type="button"
-                                key={star}
-                                onClick={() => setReviewRating(star)}
-                                className={`text-2xl transition-colors ${
-                                  star <= reviewRating
-                                    ? "text-yellow-500 hover:text-yellow-600"
-                                    : "text-gray-300 hover:text-gray-400"
-                                }`}
-                                aria-label={`${star} star${
-                                  star > 1 ? "s" : ""
-                                }`}
-                              >
-                                <FaStar />
-                              </button>
-                            ))}
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {reviewRating === 1 && "Poor"}
-                            {reviewRating === 2 && "Fair"}
-                            {reviewRating === 3 && "Good"}
-                            {reviewRating === 4 && "Very Good"}
-                            {reviewRating === 5 && "Excellent"}
-                          </p>
-                        </div>
-                        <div className="mb-4">
-                          <label className="block mb-2 font-medium text-gray-700">
-                            Comment *
-                          </label>
-                          <textarea
-                            className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-[#0c0b45] focus:border-transparent transition-all"
-                            rows={4}
-                            value={reviewComment}
-                            onChange={(e) => setReviewComment(e.target.value)}
-                            placeholder="Share your experience with this product..."
-                            required
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          className="w-full bg-[#0c0b45] text-white py-3 rounded-lg font-medium hover:bg-[#0c0b45]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={reviewSubmitting}
-                        >
-                          {reviewSubmitting ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Submitting...
-                            </span>
-                          ) : (
-                            "Submit Review"
-                          )}
-                        </button>
-                      </form>
-                    ) : (
-                      <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                        <p className="text-gray-700 mb-3">
-                          You can only review products you have purchased and
-                          completed.
+                      <div className="mt-3 p-2 bg-blue-50 rounded-md border border-blue-200">
+                        <p className="text-xs text-blue-700">
+                          You have already reviewed this product
                         </p>
                       </div>
+                    ) : canReview ? (
+                      <button
+                        onClick={() => setShowReviewForm(true)}
+                        className="mt-3 w-full py-2 px-3 bg-[#0c0b45] text-white text-xs rounded hover:bg-gray-900 transition-colors"
+                      >
+                        Write a Review
+                      </button>
+                    ) : (
+                      <p className="mt-3 text-xs text-gray-500">
+                        Purchase to review
+                      </p>
                     )
                   ) : (
-                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
-                      <p className="text-gray-700 mb-3">
-                        Sign in to share your experience with this product
-                      </p>
-                      <button
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0c0b45] text-white rounded-lg font-medium hover:bg-[#0c0b45]/90 transition-colors"
-                        onClick={() =>
-                          navigate("/login", {
-                            state: { from: `/product/${id}` },
-                          })
-                        }
-                      >
-                        Sign In to Review
-                      </button>
-                    </div>
+                    <button
+                      onClick={() =>
+                        navigate("/login", {
+                          state: { from: `/product/${id}` },
+                        })
+                      }
+                      className="mt-3 w-full py-2 px-3 bg-[#0c0b45] text-white text-xs rounded hover:bg-gray-900 transition-colors"
+                    >
+                      Sign In to Review
+                    </button>
                   )}
-                </div>
-                {/* Individual Reviews Section */}
-                <div className="divide-y divide-gray-200">
-                  {product.reviews && product.reviews.length > 0 ? (
-                    product.reviews.map((review, index) => (
-                      <div
-                        key={index}
-                        className="p-6 hover:bg-gray-50 transition-all"
-                      >
-                        {/* Top row with rating and date */}
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => {
-                              const ratingValue = i + 1;
-                              const reviewRating = review.rating || 0;
-                              return (
-                                <span key={i} className="mr-0.5">
-                                  {reviewRating >= ratingValue ? (
-                                    <FaStar className="text-[#2e8e00] w-4 h-4" />
-                                  ) : reviewRating >= ratingValue - 0.5 ? (
-                                    <FaStarHalfAlt className="text-[#2e8e00] w-4 h-4" />
-                                  ) : (
-                                    <FaRegStar className="text-gray-300 w-4 h-4" />
-                                  )}
-                                </span>
-                              );
-                            })}
+
+                  {/* Recent Reviews Preview */}
+                  {product.reviews && product.reviews.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <h4 className="text-sm font-medium text-gray-900">
+                        Recent Reviews
+                      </h4>
+                      {product.reviews.slice(0, 2).map((review, index) => (
+                        <div key={index} className="bg-gray-50 p-2 rounded-md">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-5 h-5 bg-[#0c0b45] rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                              {(review.user?.fullName || "A")
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => {
+                                const ratingValue = i + 1;
+                                const reviewRating = review.rating || 0;
+                                return (
+                                  <span key={i}>
+                                    {reviewRating >= ratingValue ? (
+                                      <FaStar className="text-[#2e8e00] w-2 h-2" />
+                                    ) : reviewRating >= ratingValue - 0.5 ? (
+                                      <FaStarHalfAlt className="text-[#2e8e00] w-2 h-2" />
+                                    ) : (
+                                      <FaRegStar className="text-gray-300 w-2 h-2" />
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-700 line-clamp-2">
+                            {review.comment}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
                             {formatDate(
                               review.createdAt || review.date || new Date()
                             )}
-                          </div>
-                        </div>
-
-                        {/* Review title and content */}
-                        {review.title && (
-                          <h3 className="text-base font-semibold text-gray-800 mb-2">
-                            {review.title}
-                          </h3>
-                        )}
-
-                        <div className="mb-4">
-                          <p className="text-gray-700">{review.comment}</p>
-                        </div>
-
-                        {/* Review images */}
-                        {review.images && review.images.length > 0 && (
-                          <div className="mb-4">
-                            <div className="flex flex-wrap gap-2 mt-2">
-                              {review.images.map((img, imgIndex) => (
-                                <div
-                                  key={imgIndex}
-                                  className="w-16 h-16 bg-gray-100 rounded overflow-hidden border border-gray-200"
-                                >
-                                  <img
-                                    src={img}
-                                    alt="Review"
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Reviewer info */}
-                        <div className="flex items-center mt-2">
-                          <div className="w-8 h-8 bg-[#0c0b45] rounded-full flex items-center justify-center text-white font-semibold mr-2">
-                            {(review.user?.fullName || "A")
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-                          <p className="text-sm font-medium">
-                            {review.user?.fullName || "Anonymous"}
                           </p>
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12">
-                      <FaCamera className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-600 mb-4">
-                        No reviews yet. Be the first to share your experience!
-                      </p>
-                      {isAuthenticated() && canReview ? (
-                        <button
-                          className="px-6 py-3 bg-[#0c0b45] text-white rounded text-sm font-medium hover:bg-opacity-90 transition-all"
-                          onClick={() => setShowReviewForm(true)}
-                        >
-                          WRITE A REVIEW
-                        </button>
-                      ) : isAuthenticated() ? null : (
-                        <button
-                          className="px-6 py-3 bg-[#0c0b45] text-white rounded text-sm font-medium hover:bg-opacity-90 transition-all"
-                          onClick={() =>
-                            navigate("/login", {
-                              state: { from: `/product/${id}` },
-                            })
-                          }
-                        >
-                          Sign In to Review
+                      ))}
+                      {product.reviews.length > 2 && (
+                        <button className="text-xs text-[#0c0b45] hover:underline">
+                          View all {product.reviews.length} reviews
                         </button>
                       )}
                     </div>
                   )}
                 </div>
               </div>
-            )}
+            </div>
           </section>
 
           <section className="w-full mt-12">
