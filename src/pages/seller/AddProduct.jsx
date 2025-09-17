@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../../services/apiService";
 import { API } from "../../config/api";
+import Swal from "sweetalert2";
 import {
   ChevronDown,
   FileText,
@@ -99,6 +100,7 @@ const AddProduct = () => {
   const [subcategoryDropdownOpen, setSubcategoryDropdownOpen] = useState(false);
   const [categoryInput, setCategoryInput] = useState("");
   const [subcategoryInput, setSubcategoryInput] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const isCategoryOptionClicking = useRef(false);
   const isSubcategoryOptionClicking = useRef(false);
 
@@ -140,30 +142,81 @@ const AddProduct = () => {
     }
   }, [form.subCategory, subCategories]);
 
+  // Add beforeunload event listener to warn about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue =
+          "You have unsaved changes. Are you sure you want to leave?";
+        return "You have unsaved changes. Are you sure you want to leave?";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Function to check if form has unsaved changes
+  const checkForUnsavedChanges = (currentForm) => {
+    return (
+      currentForm.title !== initialState.title ||
+      currentForm.description !== initialState.description ||
+      currentForm.category !== initialState.category ||
+      currentForm.subCategory !== initialState.subCategory ||
+      currentForm.price !== initialState.price ||
+      currentForm.compareAtPrice !== initialState.compareAtPrice ||
+      currentForm.quantityAvailable !== initialState.quantityAvailable ||
+      currentForm.lotSize !== initialState.lotSize ||
+      currentForm.length !== initialState.length ||
+      currentForm.breadth !== initialState.breadth ||
+      currentForm.height !== initialState.height ||
+      currentForm.weight !== initialState.weight ||
+      currentForm.brand !== initialState.brand ||
+      currentForm.model !== initialState.model ||
+      currentForm.featuredImage !== initialState.featuredImage ||
+      currentForm.images.length > 0 ||
+      currentForm.files.length > 0 ||
+      JSON.stringify(currentForm.keyHighLights) !==
+        JSON.stringify(initialState.keyHighLights)
+    );
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const newForm = { ...form, [name]: value };
+    setForm(newForm);
+    setHasUnsavedChanges(checkForUnsavedChanges(newForm));
   };
 
   const handleHighlightChange = (idx, value) => {
     setForm((prev) => {
       const highlights = [...prev.keyHighLights];
       highlights[idx] = value;
-      return { ...prev, keyHighLights: highlights };
+      const newForm = { ...prev, keyHighLights: highlights };
+      setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+      return newForm;
     });
   };
 
   const addHighlight = () => {
-    if (form.keyHighLights.length < 10)
-      setForm((prev) => ({
-        ...prev,
-        keyHighLights: [...prev.keyHighLights, ""],
-      }));
+    if (form.keyHighLights.length < 10) {
+      setForm((prev) => {
+        const newForm = {
+          ...prev,
+          keyHighLights: [...prev.keyHighLights, ""],
+        };
+        setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+        return newForm;
+      });
+    }
   };
   const removeHighlight = (idx) => {
     setForm((prev) => {
       const highlights = prev.keyHighLights.filter((_, i) => i !== idx);
-      return { ...prev, keyHighLights: highlights };
+      const newForm = { ...prev, keyHighLights: highlights };
+      setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+      return newForm;
     });
   };
 
@@ -176,7 +229,11 @@ const AddProduct = () => {
     try {
       const data = await uploadFiles(API.IMAGE.UPLOAD, [file]);
       if (data.imageUrls && data.imageUrls.length > 0) {
-        setForm((prev) => ({ ...prev, featuredImage: data.imageUrls[0] }));
+        setForm((prev) => {
+          const newForm = { ...prev, featuredImage: data.imageUrls[0] };
+          setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+          return newForm;
+        });
       } else {
         setError("Failed to upload featured image");
       }
@@ -199,10 +256,14 @@ const AddProduct = () => {
     try {
       const data = await uploadFiles(API.IMAGE.UPLOAD, files);
       if (data.imageUrls && data.imageUrls.length > 0) {
-        setForm((prev) => ({
-          ...prev,
-          images: [...prev.images, ...data.imageUrls],
-        }));
+        setForm((prev) => {
+          const newForm = {
+            ...prev,
+            images: [...prev.images, ...data.imageUrls],
+          };
+          setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+          return newForm;
+        });
       } else {
         setError("Failed to upload images");
       }
@@ -221,10 +282,14 @@ const AddProduct = () => {
     try {
       const data = await uploadFiles(API.IMAGE.UPLOAD_FILE, files, "files");
       if (data.fileUrls && data.fileUrls.length > 0) {
-        setForm((prev) => ({
-          ...prev,
-          files: [...prev.files, ...data.fileUrls],
-        }));
+        setForm((prev) => {
+          const newForm = {
+            ...prev,
+            files: [...prev.files, ...data.fileUrls],
+          };
+          setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+          return newForm;
+        });
       } else {
         setError("Failed to upload files");
       }
@@ -238,13 +303,17 @@ const AddProduct = () => {
   const removeImage = (idx) => {
     setForm((prev) => {
       const images = prev.images.filter((_, i) => i !== idx);
-      return { ...prev, images };
+      const newForm = { ...prev, images };
+      setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+      return newForm;
     });
   };
   const removeFile = (idx) => {
     setForm((prev) => {
       const files = prev.files.filter((_, i) => i !== idx);
-      return { ...prev, files };
+      const newForm = { ...prev, files };
+      setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+      return newForm;
     });
   };
 
@@ -404,6 +473,7 @@ const AddProduct = () => {
       setSuccess("Product added successfully!");
       setForm(initialState);
       setValidationErrors({});
+      setHasUnsavedChanges(false);
     } catch (err) {
       setError("Failed to add product");
     } finally {
@@ -465,11 +535,15 @@ const AddProduct = () => {
                       type="button"
                       className="ml-2 text-white hover:text-gray-200 focus:outline-none"
                       onClick={() => {
-                        setForm((prev) => ({
-                          ...prev,
-                          category: "",
-                          subCategory: "",
-                        }));
+                        setForm((prev) => {
+                          const newForm = {
+                            ...prev,
+                            category: "",
+                            subCategory: "",
+                          };
+                          setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                          return newForm;
+                        });
                         setCategoryInput("");
                       }}
                       aria-label="Clear category"
@@ -520,11 +594,15 @@ const AddProduct = () => {
                       }`}
                       onMouseDown={() => {
                         isCategoryOptionClicking.current = true;
-                        setForm((prev) => ({
-                          ...prev,
-                          category: cat._id,
-                          subCategory: "",
-                        }));
+                        setForm((prev) => {
+                          const newForm = {
+                            ...prev,
+                            category: cat._id,
+                            subCategory: "",
+                          };
+                          setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                          return newForm;
+                        });
                         setCategoryDropdownOpen(false);
                         setCategoryInput("");
                         setTimeout(() => {
@@ -556,7 +634,11 @@ const AddProduct = () => {
                       type="button"
                       className="ml-2 text-white hover:text-gray-200 focus:outline-none"
                       onClick={() => {
-                        setForm((prev) => ({ ...prev, subCategory: "" }));
+                        setForm((prev) => {
+                          const newForm = { ...prev, subCategory: "" };
+                          setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                          return newForm;
+                        });
                         setSubcategoryInput("");
                       }}
                       aria-label="Clear subcategory"
@@ -607,7 +689,11 @@ const AddProduct = () => {
                       }`}
                       onMouseDown={() => {
                         isSubcategoryOptionClicking.current = true;
-                        setForm((prev) => ({ ...prev, subCategory: sub._id }));
+                        setForm((prev) => {
+                          const newForm = { ...prev, subCategory: sub._id };
+                          setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                          return newForm;
+                        });
                         setSubcategoryDropdownOpen(false);
                         setSubcategoryInput("");
                         setTimeout(() => {
@@ -910,10 +996,14 @@ const AddProduct = () => {
               try {
                 const data = await uploadFiles(API.IMAGE.UPLOAD, [file]);
                 if (data.imageUrls && data.imageUrls.length > 0) {
-                  setForm((prev) => ({
-                    ...prev,
-                    featuredImage: data.imageUrls[0],
-                  }));
+                  setForm((prev) => {
+                    const newForm = {
+                      ...prev,
+                      featuredImage: data.imageUrls[0],
+                    };
+                    setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                    return newForm;
+                  });
                 } else {
                   setError("Failed to upload featured image");
                 }
@@ -949,7 +1039,11 @@ const AddProduct = () => {
               <button
                 type="button"
                 onClick={() =>
-                  setForm((prev) => ({ ...prev, featuredImage: "" }))
+                  setForm((prev) => {
+                    const newForm = { ...prev, featuredImage: "" };
+                    setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                    return newForm;
+                  })
                 }
                 className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow"
                 title="Remove featured image"
@@ -984,10 +1078,14 @@ const AddProduct = () => {
                 try {
                   const data = await uploadFiles(API.IMAGE.UPLOAD, files);
                   if (data.imageUrls && data.imageUrls.length > 0) {
-                    setForm((prev) => ({
-                      ...prev,
-                      images: [...prev.images, ...data.imageUrls],
-                    }));
+                    setForm((prev) => {
+                      const newForm = {
+                        ...prev,
+                        images: [...prev.images, ...data.imageUrls],
+                      };
+                      setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                      return newForm;
+                    });
                   } else {
                     setError("Failed to upload images");
                   }
@@ -1065,10 +1163,14 @@ const AddProduct = () => {
                   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
                 ].includes(f.type)
               );
-              setForm((prev) => ({
-                ...prev,
-                files: [...prev.files, ...files],
-              }));
+              setForm((prev) => {
+                const newForm = {
+                  ...prev,
+                  files: [...prev.files, ...files],
+                };
+                setHasUnsavedChanges(checkForUnsavedChanges(newForm));
+                return newForm;
+              });
             }}
             onClick={() =>
               document.getElementById("file-attachments-input").click()
@@ -1144,7 +1246,37 @@ const AddProduct = () => {
         <div className="flex gap-4 pt-4">
           <button
             type="button"
-            onClick={() => window.history.back()}
+            onClick={async () => {
+              if (hasUnsavedChanges) {
+                const result = await Swal.fire({
+                  title: "Unsaved Changes",
+                  text: "You have unsaved changes. Are you sure you want to discard them and leave?",
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonText: "Yes, discard changes",
+                  cancelButtonText: "Cancel",
+                  customClass: {
+                    popup: "w-72 p-4 bg-gray-100 rounded-lg shadow-lg",
+                    icon: "w-12 h-12",
+                    title: "text-lg font-bold text-gray-800",
+                    htmlContainer: "text-sm text-gray-600",
+                    actions: "flex justify-center gap-5",
+                    confirmButton:
+                      "bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700",
+                    cancelButton:
+                      "bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300",
+                  },
+                  buttonsStyling: false,
+                });
+
+                if (result.isConfirmed) {
+                  setHasUnsavedChanges(false);
+                  window.history.back();
+                }
+              } else {
+                window.history.back();
+              }
+            }}
             className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg border border-gray-300 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
           >
             Cancel

@@ -41,6 +41,7 @@ const OrderConfirmation = () => {
       if (!singleOrder.paymentTransactionId) {
         // If no paymentTransactionId, just show the single order
         setOrders([singleOrder]);
+        console.log("Single order received from API:", singleOrder);
         return;
       }
 
@@ -49,6 +50,7 @@ const OrderConfirmation = () => {
         API.ORDERS.GET_BY_PAYMENT(singleOrder.paymentTransactionId)
       );
       setOrders(allOrdersResponse.data.orders);
+      console.log("Orders received from API:", allOrdersResponse.data.orders);
     } catch (error) {
       console.error("Error fetching order details:", error);
       setError("Failed to load order details");
@@ -79,10 +81,11 @@ const OrderConfirmation = () => {
   };
 
   const shareOrder = () => {
+    const displayOrderId = orders[0]?.paymentTransactionId || orderId;
     if (navigator.share) {
       navigator.share({
         title: "My Order Confirmation",
-        text: `I just placed an order on Cotchel! Order ID: ${orderId}`,
+        text: `I just placed an order on Cotchel! Order ID: ${displayOrderId}`,
         url: window.location.href,
       });
     } else {
@@ -146,7 +149,7 @@ const OrderConfirmation = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold mb-1">
-                    Order #{orderId}
+                    Order #{orders[0]?.paymentTransactionId || orderId}
                   </h2>
                   <p className="text-blue-100">
                     Placed on {formatDate(orders[0]?.createdAt)} at{" "}

@@ -7,7 +7,6 @@ import {
   FiEdit2,
   FiUser,
   FiPhone,
-  FiMapPin,
   FiBriefcase,
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
@@ -155,8 +154,6 @@ const Account = () => {
   }
 
   const user = data?.data;
-  const addresses = user?.addresses || [];
-  const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
   const sellerDetails = user?.sellerDetails;
 
   return (
@@ -167,10 +164,9 @@ const Account = () => {
       <h2 className="text-xl font-semibold text-gray-800 mb-8 flex items-center gap-2">
         {user?.fullName || user?.name || user?.email || "Seller"}
       </h2>
-      {/* Unified Card for Basic, Contact, and Address */}
+      {/* Basic Details Card */}
       <section className="relative border border-gray-200 rounded-xl bg-white p-6 mb-8">
-        {/* Basic Details */}
-        <form onSubmit={handleBasicSubmit} className="mb-6">
+        <form onSubmit={handleBasicSubmit}>
           {/* Edit icon */}
           {!editBasic && (
             <button
@@ -272,9 +268,11 @@ const Account = () => {
             </div>
           )}
         </form>
+      </section>
 
-        {/* Contact Information */}
-        <form onSubmit={handleContactSubmit} className="mb-6">
+      {/* Contact Information Card */}
+      <section className="relative border border-gray-200 rounded-xl bg-white p-6 mb-8">
+        <form onSubmit={handleContactSubmit}>
           {/* Edit icon */}
           {!editContact && (
             <button
@@ -353,35 +351,6 @@ const Account = () => {
             </div>
           )}
         </form>
-
-        {/* Default Address */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <FiMapPin className="text-[#0D0B46]" /> Default Address
-          </h2>
-          {defaultAddress ? (
-            <div>
-              <div className="font-medium text-gray-900">
-                {defaultAddress.name}{" "}
-                {defaultAddress.isDefault && (
-                  <span className="ml-2 px-2 py-0.5 text-xs bg-[#0D0B46] text-white rounded">
-                    Default
-                  </span>
-                )}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">
-                {defaultAddress.addressLine1} {defaultAddress.addressLine2},{" "}
-                {defaultAddress.city}, {defaultAddress.state} -{" "}
-                {defaultAddress.postalCode}, {defaultAddress.country}
-              </div>
-              <div className="text-sm text-gray-600">
-                Phone: {defaultAddress.phone}
-              </div>
-            </div>
-          ) : (
-            <div className="text-gray-500">No address added yet.</div>
-          )}
-        </div>
       </section>
 
       {/* Seller Details Section */}
