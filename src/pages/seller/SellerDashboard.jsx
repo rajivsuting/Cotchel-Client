@@ -90,6 +90,10 @@ const SellerDashboard = () => {
     navigate(`/products/${productId}`);
   };
 
+  const handleOrderClick = (orderId) => {
+    navigate(`/seller/dashboard/orders/${orderId}`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -129,23 +133,27 @@ const SellerDashboard = () => {
                 <h3 className="text-2xl font-bold text-gray-800">
                   {stat.value}
                 </h3>
-                <div className="mt-2 flex items-center">
-                  <span
-                    className={`text-sm font-medium flex items-center ${
-                      stat.positive ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {stat.positive ? (
-                      <ArrowUp size={14} />
-                    ) : (
-                      <ArrowDown size={14} />
-                    )}
-                    <span className="ml-1">{stat.change}</span>
-                  </span>
-                  <span className="text-xs text-gray-500 ml-2">
-                    vs yesterday
-                  </span>
-                </div>
+                {stat.title !== "Active Orders" &&
+                  stat.title !== "Total Products" &&
+                  stat.title !== "Total Sales" && (
+                    <div className="mt-2 flex items-center">
+                      <span
+                        className={`text-sm font-medium flex items-center ${
+                          stat.positive ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {stat.positive ? (
+                          <ArrowUp size={14} />
+                        ) : (
+                          <ArrowDown size={14} />
+                        )}
+                        <span className="ml-1">{stat.change}</span>
+                      </span>
+                      <span className="text-xs text-gray-500 ml-2">
+                        vs yesterday
+                      </span>
+                    </div>
+                  )}
               </div>
             </div>
           </div>
@@ -217,7 +225,11 @@ const SellerDashboard = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {dashboardData.recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
+                <tr
+                  key={order.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleOrderClick(order.id)}
+                >
                   <td
                     className="px-6 py-4 whitespace-nowrap text-sm font-medium"
                     style={{ color: themeColor }}

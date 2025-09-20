@@ -8,7 +8,7 @@ import { Country, State, City } from "country-state-city";
 
 const SellerDetails = () => {
   const navigate = useNavigate();
-  const { user, checkAuth } = useAuth();
+  const { user, checkAuth, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     businessName: "",
@@ -259,7 +259,14 @@ const SellerDetails = () => {
         toast.success(
           "Seller details submitted successfully! Please wait for admin approval."
         );
-        await checkAuth(); // Refresh user data
+        // Update the user in auth context immediately with the response data
+        if (response.data.user) {
+          updateUser(response.data.user);
+          // Wait a moment for tokens to be set, then refresh auth
+          setTimeout(async () => {
+            await checkAuth();
+          }, 100);
+        }
         navigate("/seller-verification");
       }
     } catch (error) {

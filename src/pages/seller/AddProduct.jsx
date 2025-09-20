@@ -489,8 +489,10 @@ const AddProduct = () => {
   );
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200 p-8 mt-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Add Product</h2>
+    <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8 mt-4 sm:mt-6 lg:mt-8">
+      <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-800">
+        Add Product
+      </h2>
       {error && (
         <div className="bg-red-100 text-red-800 p-3 rounded mb-4">{error}</div>
       )}
@@ -499,11 +501,11 @@ const AddProduct = () => {
           {success}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-2 mt-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2 mt-4">
           Product Details
         </h3>
-        <div className="space-y-6 mb-8">
+        <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Product Title *
@@ -513,7 +515,7 @@ const AddProduct = () => {
               name="title"
               value={form.title}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
             />
             {validationErrors.title && (
               <div className="text-red-500 text-xs mt-1">
@@ -521,7 +523,7 @@ const AddProduct = () => {
               </div>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category *
@@ -573,7 +575,7 @@ const AddProduct = () => {
                     }, 150)
                   }
                   placeholder="Select category..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
                 />
                 <ChevronDown className="w-4 h-4 text-gray-400 ml-2 absolute right-3 pointer-events-none" />
               </div>
@@ -668,7 +670,7 @@ const AddProduct = () => {
                     }, 150)
                   }
                   placeholder="Select subcategory..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#0c0b45]/30"
                 />
                 <ChevronDown className="w-4 h-4 text-gray-400 ml-2 absolute right-3 pointer-events-none" />
               </div>
@@ -714,10 +716,10 @@ const AddProduct = () => {
             </div>
           </div>
         </div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2 mt-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2 mt-4 sm:mt-6">
           Pricing Information
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Price (₹) *
@@ -730,7 +732,7 @@ const AddProduct = () => {
               onWheel={(e) => e.target.blur()}
               min={0}
               step="0.01"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.price && (
               <div className="text-red-500 text-xs mt-1">
@@ -750,7 +752,7 @@ const AddProduct = () => {
               onWheel={(e) => e.target.blur()}
               min={0}
               step="0.01"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.compareAtPrice && (
               <div className="text-red-500 text-xs mt-1">
@@ -769,7 +771,7 @@ const AddProduct = () => {
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
               min={1}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.quantityAvailable && (
               <div className="text-red-500 text-xs mt-1">
@@ -787,7 +789,7 @@ const AddProduct = () => {
               value={form.lotSize}
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.lotSize && (
               <div className="text-red-500 text-xs mt-1">
@@ -807,7 +809,7 @@ const AddProduct = () => {
               onWheel={(e) => e.target.blur()}
               min={0}
               step="0.01"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.length && (
               <div className="text-red-500 text-xs mt-1">
@@ -827,7 +829,7 @@ const AddProduct = () => {
               onWheel={(e) => e.target.blur()}
               min={0}
               step="0.01"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.breadth && (
               <div className="text-red-500 text-xs mt-1">
@@ -847,7 +849,7 @@ const AddProduct = () => {
               onWheel={(e) => e.target.blur()}
               min={0}
               step="0.01"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.height && (
               <div className="text-red-500 text-xs mt-1">
@@ -867,7 +869,7 @@ const AddProduct = () => {
               onWheel={(e) => e.target.blur()}
               min={0}
               step="0.01"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.weight && (
               <div className="text-red-500 text-xs mt-1">
@@ -876,28 +878,31 @@ const AddProduct = () => {
             )}
           </div>
         </div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2 mt-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2 mt-4 sm:mt-6">
           Description
         </h3>
-        <div className="space-y-6 mb-8">
+        <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Key Highlights *
             </label>
             {form.keyHighLights.map((hl, idx) => (
-              <div key={idx} className="flex items-center gap-2 mb-2">
+              <div
+                key={idx}
+                className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-2"
+              >
                 <input
                   type="text"
                   value={hl}
                   onChange={(e) => handleHighlightChange(idx, e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
                   maxLength={100}
                 />
                 {form.keyHighLights.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeHighlight(idx)}
-                    className="text-red-500"
+                    className="text-red-500 text-sm px-2 py-1 hover:bg-red-50 rounded whitespace-nowrap"
                   >
                     Remove
                   </button>
@@ -913,7 +918,7 @@ const AddProduct = () => {
               <button
                 type="button"
                 onClick={addHighlight}
-                className="text-blue-600 mt-1"
+                className="text-blue-600 mt-1 text-sm px-2 py-1 hover:bg-blue-50 rounded"
               >
                 + Add Highlight
               </button>
@@ -962,7 +967,7 @@ const AddProduct = () => {
               value={form.description}
               onChange={handleChange}
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm sm:text-base"
             />
             {validationErrors.description && (
               <div className="text-red-500 text-xs mt-1">
@@ -971,15 +976,15 @@ const AddProduct = () => {
             )}
           </div>
         </div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2 mt-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2 mt-4 sm:mt-6">
           Images
         </h3>
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Featured Image *
           </label>
           <div
-            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
+            className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
             onDragOver={(e) => e.preventDefault()}
             onDrop={async (e) => {
               e.preventDefault();
@@ -1017,10 +1022,12 @@ const AddProduct = () => {
               document.getElementById("featured-image-input").click()
             }
           >
-            <div className="text-gray-500 mb-2">
+            <div className="text-gray-500 mb-2 text-sm sm:text-base">
               Drag & drop a featured image here or click to select
             </div>
-            <div className="text-xs text-gray-400">JPG/PNG only, under 2MB</div>
+            <div className="text-xs sm:text-sm text-gray-400">
+              JPG/PNG only, under 2MB
+            </div>
             <input
               id="featured-image-input"
               type="file"
@@ -1034,7 +1041,7 @@ const AddProduct = () => {
               <img
                 src={form.featuredImage}
                 alt="Featured Preview"
-                className="w-24 h-24 object-cover rounded"
+                className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded"
               />
               <button
                 type="button"
@@ -1062,7 +1069,7 @@ const AddProduct = () => {
               Other Images (max 10)
             </label>
             <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
               onDragOver={(e) => e.preventDefault()}
               onDrop={async (e) => {
                 e.preventDefault();
@@ -1099,10 +1106,10 @@ const AddProduct = () => {
                 document.getElementById("other-images-input").click()
               }
             >
-              <div className="text-gray-500 mb-2">
+              <div className="text-gray-500 mb-2 text-sm sm:text-base">
                 Drag & drop images here or click to select
               </div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs sm:text-sm text-gray-400">
                 Max 10 images, JPG/PNG only, each under 2MB
               </div>
               <input
@@ -1120,7 +1127,7 @@ const AddProduct = () => {
                   <img
                     src={img}
                     alt={`Preview ${idx + 1}`}
-                    className="w-16 h-16 object-cover rounded"
+                    className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded"
                   />
                   <button
                     type="button"
@@ -1139,15 +1146,15 @@ const AddProduct = () => {
             </div>
           )}
         </div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2 mt-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2 mt-4 sm:mt-6">
           File Attachments
         </h3>
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             File Attachments (PDF, Excel, Word, PowerPoint, CSV)
           </label>
           <div
-            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
+            className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition mb-2"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -1176,13 +1183,13 @@ const AddProduct = () => {
               document.getElementById("file-attachments-input").click()
             }
           >
-            <div className="text-gray-500 mb-2">
+            <div className="text-gray-500 mb-2 text-sm sm:text-base">
               Drag & drop files here or click to select
             </div>
-            <div className="text-xs text-gray-400 mb-3">
+            <div className="text-xs sm:text-sm text-gray-400 mb-3">
               Supported formats: PDF, XLS/XLSX, CSV, DOC/DOCX, PPT/PPTX
             </div>
-            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400">
               <div className="flex items-center gap-1">
                 <FileText className="w-4 h-4 text-red-500" />
                 <span>PDF</span>
@@ -1213,7 +1220,7 @@ const AddProduct = () => {
             {form.files.map((file, idx) => (
               <li
                 key={idx}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 gap-2"
               >
                 <div className="flex items-center gap-3">
                   {getFileIcon(file.name || file)}
@@ -1243,7 +1250,7 @@ const AddProduct = () => {
             </div>
           )}
         </div>
-        <div className="flex gap-4 pt-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
           <button
             type="button"
             onClick={async () => {
@@ -1277,14 +1284,14 @@ const AddProduct = () => {
                 window.history.back();
               }
             }}
-            className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg border border-gray-300 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+            className="w-full sm:flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg border border-gray-300 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-[#0c0b45] text-white py-3 px-6 rounded-lg hover:bg-[#14136a] focus:outline-none focus:ring-2 focus:ring-[#0c0b45] focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full sm:flex-1 bg-[#0c0b45] text-white py-3 px-6 rounded-lg hover:bg-[#14136a] focus:outline-none focus:ring-2 focus:ring-[#0c0b45] focus:ring-offset-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {loading ? "Adding..." : "Add Product"}
           </button>

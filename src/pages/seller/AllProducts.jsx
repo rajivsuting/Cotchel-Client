@@ -371,7 +371,7 @@ const SellerStock = () => {
                 Try adjusting your search or add a new product.
               </p>
               <button
-                onClick={() => navigate("/add-products?user=seller")}
+                onClick={() => navigate("/seller/dashboard/products/add")}
                 className="mt-4 px-4 py-2 bg-[#0c0b45] text-white rounded-lg hover:bg-[#14136a] transition-colors cursor-pointer"
                 aria-label="Add new product"
               >

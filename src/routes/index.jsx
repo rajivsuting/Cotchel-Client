@@ -30,6 +30,7 @@ const SellerDashboard = lazy(() => import("../pages/seller/SellerDashboard"));
 const SellerOverview = lazy(() => import("../pages/seller/Overview"));
 const SellerProducts = lazy(() => import("../pages/seller/Products"));
 const SellerOrders = lazy(() => import("../pages/seller/Orders"));
+const SellerOrderDetails = lazy(() => import("../pages/seller/OrderDetails"));
 const SellerEarnings = lazy(() => import("../pages/seller/Earnings"));
 const SellerAccount = lazy(() => import("../pages/seller/Account"));
 const SellerCustomerSupport = lazy(() =>
@@ -374,6 +375,14 @@ export const routes = [
         element: (
           <LazyRoute>
             <SellerOrders />
+          </LazyRoute>
+        ),
+      },
+      {
+        path: "orders/:orderId",
+        element: (
+          <LazyRoute>
+            <SellerOrderDetails />
           </LazyRoute>
         ),
       },

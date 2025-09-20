@@ -28,7 +28,7 @@ import {
 } from "react-icons/bs";
 import { HiOutlineMenuAlt4 } from "react-icons/hi";
 import { IoMdMenu } from "react-icons/io";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCategories } from "../hooks/useCategories";
 import api from "../services/apiService";
@@ -39,7 +39,9 @@ import { extractCartData } from "../utils/cartUtils";
 
 const Navbar = () => {
   const { isAuthenticated, logout, user, checkAuth } = useAuth();
-  console.log(user);
+  const location = useLocation();
+  console.log("Navbar user object:", user);
+  console.log("User has seller details:", !!user?.sellerDetails);
   const {
     categories = [],
     loading: categoriesLoading,
@@ -80,6 +82,31 @@ const Navbar = () => {
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState("");
   const [searchError, setSearchError] = useState("");
+
+  // Function to check if current route should hide "Become a Seller" button
+  const shouldHideBecomeSeller = () => {
+    const currentPath = location.pathname;
+    const searchParams = new URLSearchParams(location.search);
+
+    // Hide on specific seller onboarding pages
+    const sellerOnboardingPaths = [
+      "/become-seller",
+      "/seller-details",
+      "/seller-verification", // Next page after seller-details
+    ];
+
+    // Check if current path matches any seller onboarding path
+    if (sellerOnboardingPaths.includes(currentPath)) {
+      return true;
+    }
+
+    // Hide on register page only when role=seller
+    if (currentPath === "/register" && searchParams.get("role") === "seller") {
+      return true;
+    }
+
+    return false;
+  };
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -817,17 +844,18 @@ const Navbar = () => {
 
           {/* Right Icons */}
           <div className="flex items-center gap-1 sm:gap-2 md:gap-5">
-            {(!isAuthenticated() || (user && !user.sellerDetails)) && (
-              <button
-                type="button"
-                className="hidden md:flex items-center text-white  px-4 py-2 rounded-md font-semibold shadow-md hover:shadow-lg transition-all text-sm cursor-pointer"
-                onClick={() => {
-                  navigate("/become-seller");
-                }}
-              >
-                <span>Become a Seller</span>
-              </button>
-            )}
+            {(!isAuthenticated() || (user && !user.sellerDetails)) &&
+              !shouldHideBecomeSeller() && (
+                <button
+                  type="button"
+                  className="hidden md:flex items-center text-white  px-4 py-2 rounded-md font-semibold shadow-md hover:shadow-lg transition-all text-sm cursor-pointer"
+                  onClick={() => {
+                    navigate("/become-seller");
+                  }}
+                >
+                  <span>Become a Seller</span>
+                </button>
+              )}
 
             {/* Mobile Search Toggle */}
             <button
@@ -1555,20 +1583,21 @@ const Navbar = () => {
             </div>
 
             {/* Become a Seller (Mobile Menu) */}
-            {(!isAuthenticated() || (user && !user.sellerDetails)) && (
-              <div className="mt-6 px-4">
-                <button
-                  type="button"
-                  className="w-full bg-[#0D0B46] text-white hover:bg-[#23206a] py-2.5 px-4 rounded-lg font-medium shadow-md transition-all text-center cursor-pointer block"
-                  onClick={() => {
-                    navigate("/become-seller");
-                    setIsMobileMenuOpen(false);
-                  }}
-                >
-                  Become a Seller
-                </button>
-              </div>
-            )}
+            {(!isAuthenticated() || (user && !user.sellerDetails)) &&
+              !shouldHideBecomeSeller() && (
+                <div className="mt-6 px-4">
+                  <button
+                    type="button"
+                    className="w-full bg-[#0D0B46] text-white hover:bg-[#23206a] py-2.5 px-4 rounded-lg font-medium shadow-md transition-all text-center cursor-pointer block"
+                    onClick={() => {
+                      navigate("/become-seller");
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    Become a Seller
+                  </button>
+                </div>
+              )}
 
             {/* Social Links */}
             <div className="mt-6 border-t border-gray-100 pt-4 px-4">

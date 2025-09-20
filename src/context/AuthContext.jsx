@@ -61,13 +61,16 @@ export const AuthProvider = ({ children }) => {
       } else {
         setUser(null);
       }
-      console.log(user);
     } catch (error) {
       // Don't treat auth check failure as an error
       setUser(null);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const updateUser = useCallback((userData) => {
+    setUser(userData);
   }, []);
 
   // Check auth status in the background
@@ -132,6 +135,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         isAuthenticated,
         checkAuth,
+        updateUser,
         loading,
       }}
     >

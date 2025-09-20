@@ -77,7 +77,7 @@ const Orders = () => {
   }, []);
 
   const handleOrderClick = (orderId) => {
-    navigate(`/orders/${orderId}`);
+    navigate(`/seller/dashboard/orders/${orderId}`);
   };
 
   const handleExport = async () => {
