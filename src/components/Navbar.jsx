@@ -427,10 +427,21 @@ const Navbar = () => {
   };
 
   const handleProtectedAction = (path) => {
+    console.log("handleProtectedAction called with path:", path);
+    console.log("isAuthenticated():", isAuthenticated());
+    console.log("user object:", user);
+
     if (!isAuthenticated()) {
+      console.log("Not authenticated, redirecting to login");
       navigate("/login", { state: { from: path } });
     } else {
-      navigate(path);
+      console.log("Authenticated, navigating directly to:", path);
+      try {
+        navigate(path);
+        console.log("Navigation called successfully");
+      } catch (error) {
+        console.error("Navigation error:", error);
+      }
     }
   };
 

@@ -54,16 +54,29 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = useCallback(async () => {
     try {
+      console.log("checkAuth: Starting auth check...");
       setLoading(true);
       const response = await api.get(API.USER.ME);
+      console.log("checkAuth: API response:", response.data);
       if (response.data.user) {
+        console.log("checkAuth: Setting user data:", response.data.user);
         setUser(response.data.user);
       } else {
+        console.log("checkAuth: No user in response, clearing user");
         setUser(null);
       }
     } catch (error) {
-      // Don't treat auth check failure as an error
+      console.log("checkAuth: Error occurred:", error);
+      console.log("checkAuth: Error status:", error.response?.status);
+      // Clear user data on authentication failure
       setUser(null);
+      // Clear any stale cookies or tokens
+      if (error.response?.status === 401) {
+        // Token is invalid, clear user state
+        console.log("Authentication failed, clearing user data");
+        // Clear any cached data
+        localStorage.removeItem("recentSearches");
+      }
     } finally {
       setLoading(false);
     }
@@ -77,6 +90,27 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  // Clear stale user data on app startup if no valid session
+  useEffect(() => {
+    const clearStaleData = async () => {
+      try {
+        // Try to verify current session
+        const response = await api.get(API.USER.ME);
+        if (!response.data.user) {
+          setUser(null);
+        }
+      } catch (error) {
+        // If verification fails, clear user data
+        setUser(null);
+      }
+    };
+
+    // Only run this if we have user data but want to verify it's still valid
+    if (user && !loading) {
+      clearStaleData();
+    }
+  }, [user, loading]);
 
   const login = async (email, password) => {
     try {
@@ -123,7 +157,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAuthenticated = () => {
-    return !!user;
+    // Check if user exists and has required fields
+    const isAuth = !!(user && user._id && user.email);
+    console.log("isAuthenticated check:", {
+      user: !!user,
+      userId: user?._id,
+      userEmail: user?.email,
+      result: isAuth,
+    });
+    return isAuth;
   };
 
   return (

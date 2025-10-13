@@ -14,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../services/apiService";
 
 const Profile = () => {
+  console.log("Profile: Component rendered");
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -34,12 +35,15 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      console.log("Profile: Starting to fetch profile data...");
       setIsLoading(true);
       setError(null);
       try {
         const response = await api.get("/auth/profile");
+        console.log("Profile: API response:", response.data);
         setData(response.data);
       } catch (err) {
+        console.error("Profile: Error fetching profile:", err);
         setError(err);
       } finally {
         setIsLoading(false);

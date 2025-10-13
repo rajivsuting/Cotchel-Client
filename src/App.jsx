@@ -54,30 +54,36 @@ function AppRoutes() {
   return useRoutes(routes);
 }
 
-function AppContent() {
+function AppContentWithNotifications() {
   const location = useLocation();
   const isSellerDashboard = location.pathname.startsWith("/seller");
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {!isSellerDashboard && <Navbar />}
-      <main
-        className={`flex-grow${!isSellerDashboard ? " pb-20 md:pb-0" : ""}`}
-      >
-        <Suspense fallback={<LoadingSpinner />}>
-          <AppRoutes />
-        </Suspense>
-      </main>
-      {!isSellerDashboard && <Footer />}
-      <Toaster position="top-center" />
-      {/* Global bottom nav for mobile only */}
-      {!isSellerDashboard && (
-        <div className="md:hidden">
-          <BuyerBottomNav />
-        </div>
-      )}
-    </div>
+    <NotificationProvider>
+      <div className="flex flex-col min-h-screen">
+        {!isSellerDashboard && <Navbar />}
+        <main
+          className={`flex-grow${!isSellerDashboard ? " pb-20 md:pb-0" : ""}`}
+        >
+          <Suspense fallback={<LoadingSpinner />}>
+            <AppRoutes />
+          </Suspense>
+        </main>
+        {!isSellerDashboard && <Footer />}
+        <Toaster position="top-center" />
+        {/* Global bottom nav for mobile only */}
+        {!isSellerDashboard && (
+          <div className="md:hidden">
+            <BuyerBottomNav />
+          </div>
+        )}
+      </div>
+    </NotificationProvider>
   );
+}
+
+function AppContent() {
+  return <AppContentWithNotifications />;
 }
 
 function App() {
@@ -90,10 +96,8 @@ function App() {
       <Provider store={store}>
         <Router>
           <AuthProvider>
-            <NotificationProvider>
-              <ScrollToTop />
-              <AppContent />
-            </NotificationProvider>
+            <ScrollToTop />
+            <AppContent />
           </AuthProvider>
         </Router>
       </Provider>

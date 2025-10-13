@@ -5,6 +5,16 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
 
+  console.log("ProtectedRoute check:", {
+    loading,
+    isAuthenticated: isAuthenticated(),
+    user: user,
+    userRole: user?.role,
+    lastActiveRole: user?.lastActiveRole,
+    allowedRoles,
+    pathname: location.pathname,
+  });
+
   // Show loading spinner while checking authentication
   if (loading) {
     return (
@@ -16,15 +26,26 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // Only redirect to login if we're not loading and not authenticated
   if (!loading && !isAuthenticated()) {
+    console.log("ProtectedRoute: Not authenticated, redirecting to login");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // If allowedRoles is specified, only allow access for those roles
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  // Check both user.role and user.lastActiveRole
+  const userRole = user?.role || user?.lastActiveRole;
+  console.log("ProtectedRoute: Role check:", {
+    userRole,
+    allowedRoles,
+    isAllowed: allowedRoles ? allowedRoles.includes(userRole) : true,
+  });
+
+  if (allowedRoles && user && !allowedRoles.includes(userRole)) {
+    console.log("ProtectedRoute: Role not allowed, redirecting to home");
     // Redirect to home for unauthorized access
     return <Navigate to="/" replace />;
   }
 
+  console.log("ProtectedRoute: Access granted");
   return children;
 };
 
