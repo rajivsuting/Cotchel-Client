@@ -78,6 +78,14 @@ export const API = {
     CANCEL: (id) => `${API_BASE_URL}/orders/${id}/cancel`,
     CANCEL_PAYMENT: `${API_BASE_URL}/orders/cancel-payment`,
     TEST_RESTORE_STOCK: `${API_BASE_URL}/orders/test-restore-stock`,
+    // Payment retry endpoints (Like Flipkart)
+    PENDING_PAYMENT: `${API_BASE_URL}/orders/pending-payment`,
+    RETRY_PAYMENT: (orderId) =>
+      `${API_BASE_URL}/orders/${orderId}/retry-payment`,
+    CAN_RETRY_PAYMENT: (orderId) =>
+      `${API_BASE_URL}/orders/${orderId}/can-retry-payment`,
+    CANCEL_PENDING: (orderId) =>
+      `${API_BASE_URL}/orders/${orderId}/cancel-pending`,
   },
   // Address endpoints
   ADDRESS: {

@@ -147,11 +147,18 @@ const BuyNowCheckout = () => {
                   orderId: orderData.orderId,
                   reason: "Payment modal closed by user",
                 });
-                toast.info("Order cancelled, please try again");
-                navigate("/");
+                toast.info(
+                  "Payment pending. You can retry payment from your orders page.",
+                  {
+                    duration: 5000,
+                  }
+                );
+                navigate("/buyer/orders");
               } catch (error) {
-                console.error("Error cancelling order:", error);
-                toast.error("Failed to cancel order. Please contact support.");
+                console.error("Error handling payment cancellation:", error);
+                toast.error(
+                  "Failed to process payment cancellation. Please contact support."
+                );
               }
             },
           },

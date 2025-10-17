@@ -13,8 +13,11 @@ import {
   FiPhone,
   FiMail,
   FiMapPin,
+  FiDownload,
 } from "react-icons/fi";
 import LoadingState from "../../components/LoadingState";
+import { canDownloadInvoice } from "../../utils/orderStatusUtils";
+import { toast } from "react-hot-toast";
 
 const SellerOrderDetails = () => {
   const { orderId } = useParams();
@@ -113,6 +116,32 @@ const SellerOrderDetails = () => {
     }
   };
 
+  const handleDownloadInvoice = async () => {
+    try {
+      const response = await api.get(`/invoices/${orderId}/download`, {
+        responseType: "blob",
+      });
+
+      // Create blob and download
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Cotchel-Invoice-${orderId.slice(-8).toUpperCase()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Invoice downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to download invoice"
+      );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -145,6 +174,15 @@ const SellerOrderDetails = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
+              {canDownloadInvoice(order.status, order.paymentStatus) && (
+                <button
+                  onClick={handleDownloadInvoice}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-[#0D0B46] text-sm font-medium rounded-md text-[#0D0B46] hover:bg-[#0D0B46] hover:text-white transition-colors"
+                >
+                  <FiDownload className="w-4 h-4" />
+                  Invoice
+                </button>
+              )}
               <div
                 className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
                   order.status

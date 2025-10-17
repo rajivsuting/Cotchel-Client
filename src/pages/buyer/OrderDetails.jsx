@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import api from "../../services/apiService";
-import { API } from "../../config/api";
+import { API, handleApiError } from "../../config/api";
 import {
   FiPackage,
   FiTruck,
@@ -9,14 +9,21 @@ import {
   FiXCircle,
   FiArrowLeft,
   FiClock,
+  FiDownload,
+  FiCreditCard,
+  FiAlertCircle,
 } from "react-icons/fi";
 import LoadingState from "../../components/LoadingState";
+import { canDownloadInvoice } from "../../utils/orderStatusUtils";
+import { toast } from "react-hot-toast";
 
 const OrderDetails = () => {
   const { orderId } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -108,6 +115,140 @@ const OrderDetails = () => {
       return stepIndex === currentIndex ? "active" : "completed";
     }
     return "pending";
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      const response = await api.get(`/invoices/${orderId}/download`, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Cotchel-Invoice-${orderId.slice(-8).toUpperCase()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Invoice downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to download invoice"
+      );
+    }
+  };
+
+  const getTimeRemaining = (createdAt) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffMs = 30 * 60 * 1000 - (now - created);
+
+    if (diffMs <= 0) return { expired: true, minutes: 0, seconds: 0 };
+
+    const minutes = Math.floor(diffMs / 60000);
+    const seconds = Math.floor((diffMs % 60000) / 1000);
+
+    return { expired: false, minutes, seconds };
+  };
+
+  const handleCancelPendingOrder = async () => {
+    try {
+      setCancellingOrder(true);
+      await api.delete(API.ORDERS.CANCEL_PENDING(orderId));
+      toast.success("Order cancelled successfully");
+      navigate("/buyer/orders");
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      toast.error(handleApiError(error));
+      setCancellingOrder(false);
+    }
+  };
+
+  const handleRetryPayment = async () => {
+    try {
+      const eligibilityResponse = await api.get(
+        API.ORDERS.CAN_RETRY_PAYMENT(orderId)
+      );
+
+      if (!eligibilityResponse.data.data.canRetry) {
+        toast.error(
+          eligibilityResponse.data.data.message || "Payment cannot be retried"
+        );
+        return;
+      }
+
+      const response = await api.post(API.ORDERS.RETRY_PAYMENT(orderId));
+      const paymentData = response.data.data;
+
+      const options = {
+        key: "rzp_test_JuxnZBxv767oxR",
+        amount: paymentData.amount * 100,
+        currency: "INR",
+        name: "Cotchel",
+        description: "Complete your payment",
+        order_id: paymentData.paymentOrderId,
+        handler: async function (razorpayResponse) {
+          try {
+            await api.post(API.ORDERS.VERIFY_PAYMENT, {
+              order_id: paymentData.paymentOrderId,
+              payment_id: razorpayResponse.razorpay_payment_id,
+              signature: razorpayResponse.razorpay_signature,
+            });
+
+            toast.success("Payment successful!");
+            window.location.reload();
+          } catch (error) {
+            console.error("Payment verification failed:", error);
+            toast.error("Payment verification failed. Please try again.");
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            toast.info("Payment cancelled. You can retry anytime.");
+          },
+        },
+        theme: {
+          color: "#0c0b45",
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error("Error retrying payment:", error);
+      toast.error("Failed to retry payment. Please try again.");
+    }
+  };
+
+  const CountdownTimer = ({ createdAt }) => {
+    const [timeLeft, setTimeLeft] = useState(getTimeRemaining(createdAt));
+
+    useEffect(() => {
+      const timer = setInterval(() => {
+        const remaining = getTimeRemaining(createdAt);
+        setTimeLeft(remaining);
+
+        if (remaining.expired) {
+          window.location.reload();
+        }
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }, [createdAt]);
+
+    if (timeLeft.expired) {
+      return <span className="text-red-600 font-medium">Expired</span>;
+    }
+
+    return (
+      <span className="text-orange-600 font-medium">
+        {timeLeft.minutes}m {timeLeft.seconds}s remaining
+      </span>
+    );
   };
 
   const OrderTrackingBar = ({ status }) => {
@@ -229,6 +370,30 @@ const OrderDetails = () => {
         </Link>
       </div>
 
+      {/* Payment Pending Alert */}
+      {order.status === "Payment Pending" &&
+        order.paymentStatus === "Pending" && (
+          <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <FiAlertCircle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                  Payment Pending
+                </h3>
+                <p className="text-sm text-gray-700 mb-2">
+                  Complete your payment to confirm this order. Your order will
+                  be automatically cancelled if payment is not received within
+                  30 minutes.
+                </p>
+                <div className="flex items-center gap-2 text-orange-600">
+                  <FiClock className="w-4 h-4" />
+                  <CountdownTimer createdAt={order.createdAt} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       {/* Order Header */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -245,13 +410,44 @@ const OrderDetails = () => {
               })}
             </p>
           </div>
-          <div
-            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-              order.status
-            )}`}
-          >
-            {getStatusIcon(order.status)}
-            {order.status}
+          <div className="flex flex-wrap items-center gap-2">
+            {order.status === "Payment Pending" &&
+              order.paymentStatus === "Pending" && (
+                <>
+                  <button
+                    onClick={handleRetryPayment}
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
+                  >
+                    <FiCreditCard className="w-4 h-4" />
+                    Complete Payment
+                  </button>
+                  <button
+                    onClick={handleCancelPendingOrder}
+                    disabled={cancellingOrder}
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-600 bg-white hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FiXCircle className="w-4 h-4" />
+                    {cancellingOrder ? "Cancelling..." : "Cancel Order"}
+                  </button>
+                </>
+              )}
+            {canDownloadInvoice(order.status, order.paymentStatus) && (
+              <button
+                onClick={handleDownloadInvoice}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-[#0D0B46] text-sm font-medium rounded-md text-[#0D0B46] hover:bg-[#0D0B46] hover:text-white transition-colors"
+              >
+                <FiDownload className="w-4 h-4" />
+                Download Invoice
+              </button>
+            )}
+            <div
+              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                order.status
+              )}`}
+            >
+              {getStatusIcon(order.status)}
+              {order.status}
+            </div>
           </div>
         </div>
       </div>

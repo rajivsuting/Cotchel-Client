@@ -26,20 +26,28 @@ export const AuthProvider = ({ children }) => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error) => {
-        // Only handle 401 errors for protected routes
+        const originalRequest = error.config;
+
+        // Only handle 401 errors for protected routes, and avoid infinite loops
         if (
           error.response?.status === 401 &&
-          error.config.url !== API.USER.ME
+          error.config.url !== API.USER.ME &&
+          error.config.url !== API.AUTH.REFRESH_TOKEN &&
+          !originalRequest._retry
         ) {
+          originalRequest._retry = true;
+
           try {
             // Try to refresh the token
             await api.post(API.AUTH.REFRESH_TOKEN);
             // Retry the original request
-            return api(error.config);
+            return api(originalRequest);
           } catch (refreshError) {
-            // If refresh fails, clear user and redirect to login
-            setUser(null);
-            navigate("/login");
+            // If refresh fails, clear user and redirect to login only if we're not already on login page
+            if (window.location.pathname !== "/login") {
+              setUser(null);
+              navigate("/login", { state: { from: window.location.pathname } });
+            }
             return Promise.reject(refreshError);
           }
         }
@@ -86,31 +94,10 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   }, []);
 
-  // Check auth status in the background
+  // Check auth status only on initial mount
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
-
-  // Clear stale user data on app startup if no valid session
-  useEffect(() => {
-    const clearStaleData = async () => {
-      try {
-        // Try to verify current session
-        const response = await api.get(API.USER.ME);
-        if (!response.data.user) {
-          setUser(null);
-        }
-      } catch (error) {
-        // If verification fails, clear user data
-        setUser(null);
-      }
-    };
-
-    // Only run this if we have user data but want to verify it's still valid
-    if (user && !loading) {
-      clearStaleData();
-    }
-  }, [user, loading]);
+  }, []); // Empty dependency array - only run once on mount
 
   const login = async (email, password) => {
     try {
