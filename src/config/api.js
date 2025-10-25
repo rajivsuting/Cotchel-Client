@@ -4,23 +4,23 @@ export const API_BASE_URL =
   "https://starfish-app-6q6ot.ondigitalocean.app/api";
 
 export const API = {
-  // Auth endpoints
+  // Client Auth endpoints
   AUTH: {
-    LOGIN: `${API_BASE_URL}/auth/login`,
-    REGISTER: `${API_BASE_URL}/auth/register`,
-    VERIFY_EMAIL: `${API_BASE_URL}/auth/verify-email`,
+    LOGIN: `${API_BASE_URL}/auth/client/login`,
+    REGISTER: `${API_BASE_URL}/auth/client/register`,
+    VERIFY_EMAIL: `${API_BASE_URL}/auth/client/verify-email`,
     RESEND_OTP: `${API_BASE_URL}/auth/resend-otp`,
     REQUEST_RESET: `${API_BASE_URL}/auth/request-reset`,
     RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-    REFRESH_TOKEN: `${API_BASE_URL}/auth/refresh-token`,
-    LOGOUT: `${API_BASE_URL}/auth/logout`,
+    REFRESH_TOKEN: `${API_BASE_URL}/auth/client/refresh-token`,
+    LOGOUT: `${API_BASE_URL}/auth/client/logout`,
     GOOGLE_SIGNIN: `${API_BASE_URL}/auth/google-signin`,
   },
-  // User endpoints
+  // Client User endpoints
   USER: {
     PROFILE: `${API_BASE_URL}/auth/profile`,
-    ME: `${API_BASE_URL}/auth/me`,
-    UPDATE_DETAILS: `${API_BASE_URL}/auth/update-details`,
+    ME: `${API_BASE_URL}/auth/client/me`,
+    UPDATE_DETAILS: `${API_BASE_URL}/auth/client/update-details`,
     EDIT: `${API_BASE_URL}/auth/edit`,
     UPDATE_ROLE: `${API_BASE_URL}/auth/update-last-active-role`,
     SELLER_DETAILS: `${API_BASE_URL}/auth/seller-details`,

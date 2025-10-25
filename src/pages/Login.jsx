@@ -207,8 +207,24 @@ const LoginForm = () => {
         const from = location.state?.from || "/";
         navigate(from, { replace: true });
       } else {
-        const msg = "Enter valid username and password";
-        toast.error(msg);
+        // Handle specific error types
+        if (result.type === "account_deactivated") {
+          toast.error(result.message, {
+            duration: 8000,
+            style: {
+              background: "#fee2e2",
+              color: "#dc2626",
+              border: "1px solid #fecaca",
+              borderRadius: "8px",
+              padding: "16px",
+              fontSize: "14px",
+              fontWeight: "500",
+            },
+          });
+        } else {
+          const msg = result.message || "Enter valid username and password";
+          toast.error(msg);
+        }
         setErrors({});
       }
     } catch (error) {

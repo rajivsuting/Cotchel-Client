@@ -18,15 +18,39 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Add axios interceptor for handling 401 errors
+  // Add axios interceptor for handling 401/403 errors
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
+
+        // Handle account deactivation/deletion errors
+        if (error.response?.status === 403 || error.response?.status === 401) {
+          const errorData = error.response.data;
+          if (
+            errorData.code === "ACCOUNT_DEACTIVATED" ||
+            errorData.code === "ACCOUNT_DELETED" ||
+            errorData.code === "ADMIN_ACCOUNT_DEACTIVATED" ||
+            errorData.code === "ADMIN_ACCOUNT_DELETED"
+          ) {
+            // Clear user session and redirect to login
+            setUser(null);
+            if (window.location.pathname !== "/login") {
+              navigate("/login", {
+                state: {
+                  from: window.location.pathname,
+                  error: errorData.message,
+                },
+              });
+            }
+            return Promise.reject(error);
+          }
+        }
 
         // Only handle 401 errors for protected routes, and avoid infinite loops
         if (
@@ -76,14 +100,16 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.log("checkAuth: Error occurred:", error);
       console.log("checkAuth: Error status:", error.response?.status);
-      // Clear user data on authentication failure
-      setUser(null);
-      // Clear any stale cookies or tokens
+      // Only clear user data on explicit 401 (unauthorized) errors
+      // Don't clear on network errors or other issues
       if (error.response?.status === 401) {
-        // Token is invalid, clear user state
-        console.log("Authentication failed, clearing user data");
+        console.log("Authentication failed (401), clearing user data");
+        setUser(null);
         // Clear any cached data
         localStorage.removeItem("recentSearches");
+      } else {
+        // For other errors (network issues, 500, etc.), keep existing user state if any
+        console.log("Non-auth error, keeping existing user state");
       }
     } finally {
       setLoading(false);
@@ -96,27 +122,66 @@ export const AuthProvider = ({ children }) => {
 
   // Check auth status only on initial mount
   useEffect(() => {
-    checkAuth();
+    if (!initialCheckDone) {
+      checkAuth().then(() => {
+        setInitialCheckDone(true);
+      });
+    }
   }, []); // Empty dependency array - only run once on mount
 
   const login = async (email, password) => {
     try {
+      setLoading(true);
       const response = await api.post(API.AUTH.LOGIN, { email, password });
 
       if (response.data.user) {
         // Set the complete user object from the response
+        console.log("Login successful, setting user:", response.data.user);
         setUser(response.data.user);
-        // Also check auth status to ensure we have the latest user data
-        await checkAuth();
+        setLoading(false);
         return { success: true };
       }
 
+      setLoading(false);
       return {
         success: false,
         message: response.data.message || "Login failed",
       };
     } catch (error) {
       console.error("Login error:", error);
+      setLoading(false);
+
+      // Handle specific error cases
+      if (error.response?.status === 403) {
+        const errorData = error.response.data;
+        if (errorData.code === "ACCOUNT_DEACTIVATED") {
+          // Clear user session and redirect to login
+          setUser(null);
+          return {
+            success: false,
+            message:
+              errorData.message ||
+              "Your account has been deactivated. Please contact support.",
+            type: "account_deactivated",
+          };
+        }
+      }
+
+      if (error.response?.status === 401) {
+        const errorData = error.response.data;
+        if (errorData.code === "ACCOUNT_DELETED") {
+          // Clear user session and redirect to login
+          setUser(null);
+          return {
+            success: false,
+            message:
+              errorData.message ||
+              "Your account has been deleted. Please contact support.",
+            type: "account_deleted",
+          };
+        }
+      }
+
       return {
         success: false,
         message: handleApiError(error),
@@ -145,11 +210,13 @@ export const AuthProvider = ({ children }) => {
 
   const isAuthenticated = () => {
     // Check if user exists and has required fields
-    const isAuth = !!(user && user._id && user.email);
+    const isAuth = !!(user && user._id);
     console.log("isAuthenticated check:", {
       user: !!user,
       userId: user?._id,
       userEmail: user?.email,
+      userRole: user?.role,
+      loading,
       result: isAuth,
     });
     return isAuth;
