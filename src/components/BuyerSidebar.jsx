@@ -16,7 +16,14 @@ import api from "../services/apiService";
 const BuyerSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, checkAuth } = useAuth();
+
+  // Safety check for useAuth
+  const authContext = useAuth();
+  if (!authContext) {
+    return null; // Don't render if context is not available
+  }
+
+  const { user, logout, checkAuth } = authContext;
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
   const [notifications, setNotifications] = useState([]);

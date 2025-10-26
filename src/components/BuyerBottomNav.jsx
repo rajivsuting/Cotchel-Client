@@ -14,7 +14,14 @@ const navItems = [
 
 const BuyerBottomNav = () => {
   const location = useLocation();
-  const { user, checkAuth } = useAuth();
+
+  // Safety check for useAuth
+  const authContext = useAuth();
+  if (!authContext) {
+    return null; // Don't render if context is not available
+  }
+
+  const { user, checkAuth } = authContext;
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState("");
 

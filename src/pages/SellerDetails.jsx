@@ -42,8 +42,8 @@ const SellerDetails = () => {
       return;
     }
 
-    // Check if user already has seller details
-    if (user?.sellerDetails) {
+    // Check if user already has seller details and is not rejected
+    if (user?.sellerDetails && user?.sellerDetailsStatus !== "rejected") {
       navigate("/seller-verification");
       return;
     }

@@ -38,7 +38,27 @@ import { setCartCount } from "../redux/slices/cartSlice";
 import { extractCartData } from "../utils/cartUtils";
 
 const Navbar = () => {
-  const { isAuthenticated, logout, user, checkAuth } = useAuth();
+  // Safety check for useAuth
+  const authContext = useAuth();
+  if (!authContext) {
+    console.error(
+      "Navbar: useAuth returned undefined - AuthContext not available"
+    );
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Authentication Error
+          </h2>
+          <p className="text-gray-600">
+            Please refresh the page and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { isAuthenticated, logout, user, checkAuth } = authContext;
   const location = useLocation();
   console.log("Navbar user object:", user);
   console.log("User has seller details:", !!user?.sellerDetails);
@@ -855,7 +875,11 @@ const Navbar = () => {
 
           {/* Right Icons */}
           <div className="flex items-center gap-1 sm:gap-2 md:gap-5">
-            {(!isAuthenticated() || (user && !user.sellerDetails)) &&
+            {(!isAuthenticated() ||
+              (user && !user.sellerDetails) ||
+              (user &&
+                user.sellerDetails &&
+                user.sellerDetailsStatus === "rejected")) &&
               !shouldHideBecomeSeller() && (
                 <button
                   type="button"
@@ -1594,7 +1618,11 @@ const Navbar = () => {
             </div>
 
             {/* Become a Seller (Mobile Menu) */}
-            {(!isAuthenticated() || (user && !user.sellerDetails)) &&
+            {(!isAuthenticated() ||
+              (user && !user.sellerDetails) ||
+              (user &&
+                user.sellerDetails &&
+                user.sellerDetailsStatus === "rejected")) &&
               !shouldHideBecomeSeller() && (
                 <div className="mt-6 px-4">
                   <button

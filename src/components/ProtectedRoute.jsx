@@ -2,8 +2,29 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { isAuthenticated, loading, user } = useAuth();
+  const authContext = useAuth();
   const location = useLocation();
+
+  // Safety check for useAuth
+  if (!authContext) {
+    console.error(
+      "ProtectedRoute: useAuth returned undefined - AuthContext not available"
+    );
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Authentication Error
+          </h2>
+          <p className="text-gray-600">
+            Please refresh the page and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { isAuthenticated, loading, user } = authContext;
 
   console.log("ProtectedRoute check:", {
     loading,

@@ -13,7 +13,15 @@ import { API } from "../config/api";
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    console.error(
+      "useAuth: AuthContext is undefined. Make sure the component is wrapped in AuthProvider"
+    );
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -222,20 +230,32 @@ export const AuthProvider = ({ children }) => {
     return isAuth;
   };
 
+  const contextValue = {
+    user,
+    setUser,
+    login,
+    logout,
+    isAuthenticated,
+    checkAuth,
+    updateUser,
+    loading,
+  };
+
+  // Debug log to ensure all values are defined
+  console.log("AuthProvider: Providing context values:", {
+    user: !!user,
+    setUser: typeof setUser,
+    login: typeof login,
+    logout: typeof logout,
+    isAuthenticated: typeof isAuthenticated,
+    checkAuth: typeof checkAuth,
+    updateUser: typeof updateUser,
+    loading: typeof loading,
+  });
+
+  // Always provide the context - let components handle undefined values
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        setUser,
-        login,
-        logout,
-        isAuthenticated,
-        checkAuth,
-        updateUser,
-        loading,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };

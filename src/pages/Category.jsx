@@ -597,24 +597,38 @@ const Category = () => {
                       </span>
                       <input
                         type="number"
-                        value={priceRange.min}
+                        value={priceRange.min || ""}
                         onChange={(e) => {
-                          const value = Math.min(
-                            Number(e.target.value),
-                            priceRange.max - 500
-                          );
-                          setPriceRange((prev) => ({
-                            ...prev,
-                            min: value,
-                          }));
-                          handleFilterChange("price", {
-                            ...priceRange,
-                            min: value,
-                          });
+                          const inputValue = e.target.value;
+                          if (inputValue === "") {
+                            setPriceRange((prev) => ({ ...prev, min: 0 }));
+                            return;
+                          }
+                          const newValue = Number(inputValue);
+                          if (!isNaN(newValue)) {
+                            const validatedValue = Math.min(
+                              Math.max(newValue, 0),
+                              priceRange.max - 500
+                            );
+                            const newPriceRange = {
+                              ...priceRange,
+                              min: validatedValue,
+                            };
+                            setPriceRange(newPriceRange);
+                            handleFilterChange("price", newPriceRange);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            const newPriceRange = { ...priceRange, min: 0 };
+                            setPriceRange(newPriceRange);
+                            handleFilterChange("price", newPriceRange);
+                          }
                         }}
                         className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
                         min="0"
                         max={priceRange.max - 500}
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -628,24 +642,51 @@ const Category = () => {
                       </span>
                       <input
                         type="number"
-                        value={priceRange.max}
+                        value={priceRange.max === 50000 ? "" : priceRange.max}
                         onChange={(e) => {
-                          const value = Math.max(
-                            Number(e.target.value),
-                            priceRange.min + 500
-                          );
-                          setPriceRange((prev) => ({
-                            ...prev,
-                            max: value,
-                          }));
-                          handleFilterChange("price", {
-                            ...priceRange,
-                            max: value,
-                          });
+                          const inputValue = e.target.value;
+                          if (inputValue === "") {
+                            setPriceRange((prev) => ({ ...prev, max: 50000 }));
+                            return;
+                          }
+                          const newValue = Number(inputValue);
+                          if (!isNaN(newValue)) {
+                            // Only validate minimum constraint, don't force it
+                            const validatedValue = Math.min(newValue, 50000);
+                            const newPriceRange = {
+                              ...priceRange,
+                              max: validatedValue,
+                            };
+                            setPriceRange(newPriceRange);
+                            handleFilterChange("price", newPriceRange);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value === "") {
+                            const newPriceRange = { ...priceRange, max: 50000 };
+                            setPriceRange(newPriceRange);
+                            handleFilterChange("price", newPriceRange);
+                          } else {
+                            // Final validation on blur - ensure max is at least min + 500
+                            const finalValue = Number(e.target.value);
+                            if (
+                              !isNaN(finalValue) &&
+                              finalValue < priceRange.min + 500
+                            ) {
+                              const correctedValue = priceRange.min + 500;
+                              const newPriceRange = {
+                                ...priceRange,
+                                max: correctedValue,
+                              };
+                              setPriceRange(newPriceRange);
+                              handleFilterChange("price", newPriceRange);
+                            }
+                          }
                         }}
                         className="w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-[#0D0B46]"
                         min={priceRange.min + 500}
                         max="50000"
+                        placeholder="50000"
                       />
                     </div>
                   </div>

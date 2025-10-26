@@ -9,6 +9,8 @@ import {
   FiUser,
   FiPhone,
   FiMapPin,
+  FiClock,
+  FiShield,
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/apiService";
@@ -19,7 +21,28 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { checkAuth } = useAuth();
+
+  // Safety check for useAuth
+  const authContext = useAuth();
+  if (!authContext) {
+    console.error(
+      "Profile: useAuth returned undefined - AuthContext not available"
+    );
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Authentication Error
+          </h2>
+          <p className="text-gray-600">
+            Please refresh the page and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { checkAuth } = authContext;
 
   // Separate state for each section
   const [basicForm, setBasicForm] = useState({
@@ -380,6 +403,74 @@ const Profile = () => {
           )}
         </section>
       </form>
+
+      {/* Seller Approval Status Section */}
+      {user?.sellerDetails && (
+        <section className="border border-gray-200 rounded-xl bg-white p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <FiShield className="text-[#0D0B46]" /> Seller Account Status
+          </h2>
+          {user?.isVerifiedSeller ? (
+            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <FiCheckCircle className="text-green-500 text-xl flex-shrink-0" />
+              <div>
+                <h3 className="text-green-800 font-semibold">
+                  🎉 Seller Account Approved!
+                </h3>
+                <p className="text-green-700 text-sm">
+                  Congratulations! Your seller account has been verified and
+                  approved. You can now start selling on our platform and access
+                  the seller dashboard.
+                </p>
+                <div className="mt-2 text-xs text-green-600">
+                  Approved on:{" "}
+                  {user?.sellerDetailsStatus === "approved"
+                    ? new Date().toLocaleDateString()
+                    : "Recently"}
+                </div>
+              </div>
+            </div>
+          ) : user?.sellerDetailsStatus === "rejected" ? (
+            <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <FiXCircle className="text-red-500 text-xl flex-shrink-0" />
+              <div>
+                <h3 className="text-red-800 font-semibold">
+                  Seller Application Rejected
+                </h3>
+                <p className="text-red-700 text-sm">
+                  Unfortunately, your seller application was not approved. You
+                  can reapply by clicking the "Become a Seller" button above.
+                </p>
+                <div className="mt-2 text-xs text-red-600">
+                  Rejected on: {new Date().toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <FiClock className="text-yellow-500 text-xl flex-shrink-0" />
+              <div>
+                <h3 className="text-yellow-800 font-semibold">
+                  Seller Account Under Review
+                </h3>
+                <p className="text-yellow-700 text-sm">
+                  Your seller application is being reviewed by our team. This
+                  process typically takes 24-48 hours. You will be notified once
+                  your account is approved.
+                </p>
+                <div className="mt-2 text-xs text-yellow-600">
+                  Application submitted:{" "}
+                  {user?.sellerDetails?.createdAt
+                    ? new Date(
+                        user.sellerDetails.createdAt
+                      ).toLocaleDateString()
+                    : "Recently"}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Address (Default Only) */}
       <section className="border border-gray-200 rounded-xl bg-white p-6">
