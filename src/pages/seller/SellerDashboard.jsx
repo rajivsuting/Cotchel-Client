@@ -53,7 +53,13 @@ const SellerDashboard = () => {
       try {
         setLoading(true);
         const data = await sellerDashboardService.getDashboardData();
-        console.log(data);
+        console.log("[DEBUG] SellerDashboard: Raw data received:", data);
+        console.log("[DEBUG] SellerDashboard: Stats:", data.stats);
+        console.log(
+          "[DEBUG] SellerDashboard: Recent orders:",
+          data.recentOrders
+        );
+        console.log("[DEBUG] SellerDashboard: Top products:", data.topProducts);
         // Format the data for display
         setDashboardData({
           stats: data.stats.map((stat) => ({
