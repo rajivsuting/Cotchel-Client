@@ -142,126 +142,164 @@ const OrderConfirmation = () => {
             </p>
           </div>
 
-          {/* Order Details Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-            {/* Order Header */}
-            <div className="bg-gradient-to-r from-[#0D0B46] to-[#23206a] text-white p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">
-                    Order #{orders[0]?.paymentTransactionId || orderId}
-                  </h2>
-                  <p className="text-blue-100">
-                    Placed on {formatDate(orders[0]?.createdAt)} at{" "}
-                    {formatTime(orders[0]?.createdAt)}
-                  </p>
-                  {orders.length > 1 && (
-                    <p className="text-blue-100 text-sm mt-1">
-                      {orders.length} orders from {orders.length} sellers
-                    </p>
-                  )}
-                </div>
-                <div className="mt-4 sm:mt-0">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                    <FiCheckCircle className="w-4 h-4 mr-1" />
-                    Confirmed
-                  </span>
-                </div>
+          {/* Payment Transaction Info */}
+          {orders[0]?.paymentTransactionId && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="flex items-center gap-2 text-sm">
+                <FiCheckCircle className="w-4 h-4 text-blue-600" />
+                <span className="text-blue-900">
+                  <span className="font-medium">Payment Transaction ID:</span>{" "}
+                  <span className="font-mono">{orders[0]?.paymentTransactionId}</span>
+                </span>
               </div>
             </div>
+          )}
 
-            {/* Order Content */}
-            <div className="p-6">
-              {/* Order Items */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Order Items
-                </h3>
-                <div className="space-y-4">
-                  {orders.flatMap((order, orderIndex) =>
-                    order.products.map((item, itemIndex) => (
-                      <div
-                        key={`${orderIndex}-${itemIndex}`}
-                        className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
-                      >
-                        <img
-                          src={
-                            item.featuredImage ||
-                            item.images?.[0] ||
-                            "/placeholder.png"
-                          }
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">
-                            {item.name}
-                          </h4>
-                          <p className="text-sm text-gray-500">
-                            Price: {item.price}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Quantity: {item.quantity} × {item.lotSize}
-                          </p>
-                          {/* <p className="text-sm text-gray-500">
-                            Lot Size: 
-                          </p> */}
-                          <p className="text-xs text-gray-400 mt-1">
-                            Seller:{" "}
-                            {order.seller?.businessName ||
-                              order.seller?.personalName ||
-                              "Unknown Seller"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900">
-                            ₹{item.totalPrice.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Order Summary */}
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Order Summary
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span>
-                      ₹
-                      {orders
-                        .reduce((sum, order) => sum + order.totalPrice, 0)
-                        .toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Shipping</span>
-                    <span>Free</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tax</span>
-                    <span>Included</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-3">
-                    <div className="flex justify-between text-lg font-semibold">
-                      <span>Total</span>
-                      <span>
-                        ₹
-                        {orders
-                          .reduce((sum, order) => sum + order.totalPrice, 0)
-                          .toFixed(2)}
+          {/* Orders from Different Sellers */}
+          <div className="space-y-6 mb-8">
+            {orders.map((order, orderIndex) => (
+              <div
+                key={order.orderId}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+              >
+                {/* Order Header */}
+                <div className="bg-gradient-to-r from-[#0D0B46] to-[#23206a] text-white p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold mb-1">
+                        Order #{order.orderId.toString().slice(-8).toUpperCase()}
+                      </h2>
+                      <p className="text-blue-100">
+                        Placed on {formatDate(order.createdAt)} at{" "}
+                        {formatTime(order.createdAt)}
+                      </p>
+                      <p className="text-blue-100 text-sm mt-1">
+                        Seller: {order.seller?.businessName || order.seller?.personalName || "Unknown Seller"}
+                      </p>
+                    </div>
+                    <div className="mt-4 sm:mt-0">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        <FiCheckCircle className="w-4 h-4 mr-1" />
+                        {order.status}
                       </span>
                     </div>
                   </div>
                 </div>
+
+                {/* Order Content */}
+                <div className="p-6">
+                  {/* Order Items */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Order Items
+                    </h3>
+                    <div className="space-y-4">
+                      {order.products.map((item, itemIndex) => (
+                        <div
+                          key={`${order.orderId}-${itemIndex}`}
+                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg"
+                        >
+                          <img
+                            src={
+                              item.featuredImage ||
+                              item.images?.[0] ||
+                              "/placeholder.png"
+                            }
+                            alt={item.name}
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">
+                              {item.name}
+                            </h4>
+                            <p className="text-sm text-gray-500">
+                              Price: ₹{item.price}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Quantity: {item.quantity} × {item.lotSize} = {item.quantity * item.lotSize} units
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">
+                              ₹{item.totalPrice.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Order Summary for this seller */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Subtotal</span>
+                        <span>₹{(order.subtotal || order.totalPrice).toFixed(2)}</span>
+                      </div>
+                      {order.shippingFee > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Shipping</span>
+                          <span>₹{order.shippingFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="border-t border-gray-200 pt-2 mt-2">
+                        <div className="flex justify-between text-base font-semibold">
+                          <span>Order Total</span>
+                          <span>₹{(order.grandTotal || order.totalPrice).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Track Order Button */}
+                  <div className="mt-4">
+                    <Link
+                      to={`/buyer/orders/${order.orderId}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#0D0B46] text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium w-full justify-center"
+                    >
+                      <FiTruck className="w-4 h-4" />
+                      Track This Order
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Overall Payment Summary */}
+          {orders.length > 1 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Payment Summary (All Orders)
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Total Items</span>
+                  <span>
+                    {orders.reduce((sum, order) => 
+                      sum + order.products.reduce((s, p) => s + (p.quantity * p.lotSize), 0), 0
+                    )} units
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Total Sellers</span>
+                  <span>{orders.length}</span>
+                </div>
+                <div className="border-t border-gray-200 pt-3">
+                  <div className="flex justify-between text-lg font-semibold">
+                    <span>Grand Total Paid</span>
+                    <span>
+                      ₹
+                      {orders
+                        .reduce((sum, order) => sum + (order.grandTotal || order.totalPrice), 0)
+                        .toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
 
           {/* Delivery & Payment Info */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">

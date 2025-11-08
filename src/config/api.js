@@ -86,6 +86,15 @@ export const API = {
       `${API_BASE_URL}/orders/${orderId}/can-retry-payment`,
     CANCEL_PENDING: (orderId) =>
       `${API_BASE_URL}/orders/${orderId}/cancel-pending`,
+    // Shipping management
+    CALCULATE_SHIPPING: `${API_BASE_URL}/orders/calculate-shipping`,
+    GENERATE_LABEL: (orderId) =>
+      `${API_BASE_URL}/orders/${orderId}/generate-label`,
+    SCHEDULE_PICKUP: (orderId) =>
+      `${API_BASE_URL}/orders/${orderId}/schedule-pickup`,
+    // Real-time tracking from Shiprocket
+    SYNC_TRACKING: (orderId) =>
+      `${API_BASE_URL}/orders/${orderId}/sync-tracking`,
   },
   // Address endpoints
   ADDRESS: {

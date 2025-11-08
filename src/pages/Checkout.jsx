@@ -22,6 +22,7 @@ const Checkout = () => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
   const [cart, setCart] = useState({
     items: [],
     subtotal: 0,
@@ -30,6 +31,7 @@ const Checkout = () => {
     discount: 0,
   });
   const [selectedAddress, setSelectedAddress] = useState(null);
+  const [shippingInfo, setShippingInfo] = useState(null);
 
   // Get cart from Redux state
   const reduxCartItems = useSelector((state) => state.cart.items);
@@ -83,26 +85,32 @@ const Checkout = () => {
         console.log("Address verification response:", addressResponse.data);
 
         if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
+          const address = addressResponse.data.data;
+          setSelectedAddress(address);
+          
           // Filter out out-of-stock items and create cart object from Redux data
           const inStockItems = reduxCartItems.filter(
             (item) => item.productId.quantityAvailable >= item.lotSize
           );
 
+          const subtotal = inStockItems.reduce(
+            (sum, item) => sum + item.price * item.quantity * item.lotSize,
+            0
+          );
+
           const cartData = {
             items: inStockItems,
-            subtotal: inStockItems.reduce(
-              (sum, item) => sum + item.price * item.quantity * item.lotSize,
-              0
-            ),
-            totalPrice: inStockItems.reduce(
-              (sum, item) => sum + item.price * item.quantity * item.lotSize,
-              0
-            ),
+            subtotal,
+            totalPrice: subtotal,
             shippingFee: 0,
             discount: 0,
           };
           setCart(cartData);
+          
+          // Calculate shipping fee
+          setLoading(false);
+          await calculateShipping(address._id);
+          return;
         } else {
           toast.error("Address not found");
           navigate("/address-selection", {
@@ -146,8 +154,11 @@ const Checkout = () => {
         );
         console.log("Address verification response:", addressResponse.data);
         if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
-        } else {
+          const address = addressResponse.data.data;
+          setSelectedAddress(address);
+          // Calculate shipping fee
+          await calculateShipping(address._id);
+        } else{
           toast.error("Address not found");
           navigate("/address-selection", {
             state: { from: "checkout" },
@@ -182,26 +193,32 @@ const Checkout = () => {
         console.log("Address response:", addressResponse.data);
 
         if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
+          const address = addressResponse.data.data;
+          setSelectedAddress(address);
+          
           // Filter out out-of-stock items and create cart object from Redux data
           const inStockItems = reduxCartItems.filter(
             (item) => item.productId.quantityAvailable >= item.lotSize
           );
 
+          const subtotal = inStockItems.reduce(
+            (sum, item) => sum + item.price * item.quantity * item.lotSize,
+            0
+          );
+
           const cartData = {
             items: inStockItems,
-            subtotal: inStockItems.reduce(
-              (sum, item) => sum + item.price * item.quantity * item.lotSize,
-              0
-            ),
-            totalPrice: inStockItems.reduce(
-              (sum, item) => sum + item.price * item.quantity * item.lotSize,
-              0
-            ),
+            subtotal,
+            totalPrice: subtotal,
             shippingFee: 0,
             discount: 0,
           };
           setCart(cartData);
+          
+          // Calculate shipping fee
+          setLoading(false);
+          await calculateShipping(address._id);
+          return;
         } else {
           toast.error("Address not found");
           navigate("/address-selection", {
@@ -229,7 +246,13 @@ const Checkout = () => {
         setCart(cartResponse.data.data);
 
         if (addressResponse.data?.data) {
-          setSelectedAddress(addressResponse.data.data);
+          const address = addressResponse.data.data;
+          setSelectedAddress(address);
+          
+          // Calculate shipping fee
+          setLoading(false);
+          await calculateShipping(address._id);
+          return;
         } else {
           toast.error("Address not found");
           navigate("/address-selection", {
@@ -250,6 +273,35 @@ const Checkout = () => {
     }
   };
 
+  const calculateShipping = async (addressId) => {
+    try {
+      setCalculatingShipping(true);
+      console.log("Calculating shipping fee...");
+      
+      const response = await api.post(API.ORDERS.CALCULATE_SHIPPING, {
+        addressId,
+      });
+
+      if (response.data.success) {
+        const shipping = response.data.data;
+        setShippingInfo(shipping);
+        setCart((prev) => ({
+          ...prev,
+          shippingFee: shipping.shippingFee,
+          totalPrice: prev.subtotal + shipping.shippingFee,
+        }));
+        console.log("Shipping calculated:", shipping);
+      }
+    } catch (error) {
+      console.error("Error calculating shipping:", error);
+      // Default to free shipping if calculation fails
+      setShippingInfo({ shippingFee: 0, isFreeShipping: true });
+      toast.info("Shipping fee calculation unavailable, proceeding with free shipping");
+    } finally {
+      setCalculatingShipping(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       toast.error("Please select a delivery address");
@@ -259,9 +311,10 @@ const Checkout = () => {
     try {
       setPlacingOrder(true);
 
-      // Create order from cart
+      // Create order from cart with shipping fee
       const response = await api.post(API.ORDERS.CART_CHECKOUT, {
         addressId: selectedAddress._id,
+        shippingFee: cart.shippingFee || 0,
       });
 
       if (response.data?.orders) {
@@ -486,8 +539,20 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">₹0</span>
+                  {calculatingShipping ? (
+                    <span className="text-gray-400 animate-pulse">Calculating...</span>
+                  ) : (
+                    <span className={`font-medium ${cart.shippingFee === 0 ? 'text-green-600' : ''}`}>
+                      {cart.shippingFee === 0 ? 'FREE' : `₹${cart.shippingFee}`}
+                    </span>
+                  )}
                 </div>
+                {shippingInfo && shippingInfo.estimatedDays && (
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <FiTruck />
+                    <span>Estimated delivery in {shippingInfo.estimatedDays} days</span>
+                  </div>
+                )}
                 {cart.discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount</span>
@@ -497,7 +562,7 @@ const Checkout = () => {
                   </div>
                 )}
                 <div className="flex justify-between text-base font-semibold pt-2 border-t border-gray-200">
-                  <span>Total</span>
+                  <span>Grand Total</span>
                   <span>₹{cart.totalPrice}</span>
                 </div>
               </div>

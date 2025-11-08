@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   FiPackage,
@@ -19,8 +19,14 @@ import {
   getPaymentStatusColor,
   canDownloadInvoice,
 } from "../../utils/orderStatusUtils";
+import { useOrdersListSocket } from "../../hooks/useSocket";
+import { useAuth } from "../../context/AuthContext";
+import { useDispatch } from "react-redux";
+import { fetchAndSyncCart } from "../../utils/cartUtils";
 
 const OrderHistory = () => {
+  const { user } = useAuth();
+  const dispatch = useDispatch();
   const [orders, setOrders] = useState([]);
   const [pendingPaymentOrders, setPendingPaymentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,9 +35,11 @@ const OrderHistory = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [cancellingOrder, setCancellingOrder] = useState(null);
 
-  const fetchOrders = async (page = 1) => {
+  const fetchOrders = async (page = 1, silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const response = await api.get(`${API.ORDERS.ALL}?page=${page}`);
       setOrders(response.data.orders);
       setTotalPages(response.data.pagination.totalPages);
@@ -40,9 +48,13 @@ const OrderHistory = () => {
       console.error("Error fetching orders:", err);
       const errorMessage = handleApiError(err);
       setError(errorMessage);
-      toast.error(errorMessage);
+      if (!silent) {
+        toast.error(errorMessage);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -59,6 +71,16 @@ const OrderHistory = () => {
     fetchOrders(currentPage);
     fetchPendingPaymentOrders();
   }, [currentPage]);
+
+  // ✅ REAL-TIME UPDATES via WebSocket (replaces polling)
+  const handleOrdersListUpdate = useCallback(() => {
+    console.log("🔔 Orders list updated - refreshing silently");
+    fetchOrders(currentPage, true); // Silent refresh
+    fetchPendingPaymentOrders();
+  }, [currentPage]);
+
+  // Connect to WebSocket for real-time orders list updates
+  useOrdersListSocket(user?._id, "buyer", handleOrdersListUpdate);
 
   const getTimeRemaining = (createdAt) => {
     const created = new Date(createdAt);
@@ -126,6 +148,10 @@ const OrderHistory = () => {
       setCancellingOrder(orderId);
       await api.delete(API.ORDERS.CANCEL_PENDING(orderId));
       toast.success("Order cancelled successfully");
+
+      // Refresh cart counter (items were restored to cart after cancellation)
+      await fetchAndSyncCart(dispatch);
+
       fetchOrders(currentPage);
       fetchPendingPaymentOrders();
     } catch (error) {
@@ -168,6 +194,10 @@ const OrderHistory = () => {
             });
 
             toast.success("Payment successful!");
+
+            // Refresh cart counter (order completed, items removed from cart)
+            await fetchAndSyncCart(dispatch);
+
             fetchOrders(currentPage);
             fetchPendingPaymentOrders();
           } catch (error) {

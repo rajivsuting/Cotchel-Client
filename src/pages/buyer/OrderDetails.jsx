@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import api from "../../services/apiService";
 import { API, handleApiError } from "../../config/api";
@@ -12,37 +12,172 @@ import {
   FiDownload,
   FiCreditCard,
   FiAlertCircle,
+  FiRefreshCw,
 } from "react-icons/fi";
 import LoadingState from "../../components/LoadingState";
 import { canDownloadInvoice } from "../../utils/orderStatusUtils";
 import { toast } from "react-hot-toast";
+import { useOrderSocket } from "../../hooks/useSocket";
+import { useDispatch } from "react-redux";
+import { fetchAndSyncCart } from "../../utils/cartUtils";
 
 const OrderDetails = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [secondsAgo, setSecondsAgo] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLiveSync, setIsLiveSync] = useState(false);
+  const [previousStatus, setPreviousStatus] = useState(null);
 
-  useEffect(() => {
+  const fetchOrderDetails = async (
+    showLoader = true,
+    isManualRefresh = false,
+    syncShiprocket = false
+  ) => {
     if (!orderId) {
       setError("Invalid order ID");
       setLoading(false);
       return;
     }
-    setLoading(true);
-    api
-      .get(API.ORDERS.GET(orderId))
-      .then((res) => {
-        setOrder(res.data.order);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || "Error loading order details");
-      })
-      .finally(() => setLoading(false));
+
+    if (showLoader) {
+      setLoading(true);
+    }
+    if (isManualRefresh) {
+      setRefreshing(true);
+    }
+
+    try {
+      // First fetch order from database
+      const res = await api.get(API.ORDERS.GET(orderId));
+      const orderData = res.data.order;
+
+      // If order has a shipment and we want real-time data, sync from Shiprocket
+      if (syncShiprocket && orderData.shipmentId) {
+        const activeStatuses = [
+          "Confirmed",
+          "Processing",
+          "Packed",
+          "Shipped",
+          "In Transit",
+          "Out for Delivery",
+        ];
+
+        if (activeStatuses.includes(orderData.status)) {
+          try {
+            console.log("Syncing tracking from Shiprocket...");
+            setIsLiveSync(true);
+            await api.post(API.ORDERS.SYNC_TRACKING(orderId));
+            // Fetch order again after Shiprocket sync
+            const updatedRes = await api.get(API.ORDERS.GET(orderId));
+            const updatedOrder = updatedRes.data.order;
+
+            // Show toast if status changed
+            if (
+              previousStatus &&
+              updatedOrder.status !== previousStatus &&
+              !isManualRefresh
+            ) {
+              toast.success(`Order status updated: ${updatedOrder.status}`);
+            }
+
+            setPreviousStatus(updatedOrder.status);
+            setOrder(updatedOrder);
+            console.log("Tracking synced from Shiprocket");
+          } catch (syncErr) {
+            console.error(
+              "Shiprocket sync failed, using cached data:",
+              syncErr
+            );
+            setOrder(orderData);
+            setPreviousStatus(orderData.status);
+          } finally {
+            setIsLiveSync(false);
+          }
+        } else {
+          setOrder(orderData);
+          if (!previousStatus) setPreviousStatus(orderData.status);
+        }
+      } else {
+        setOrder(orderData);
+        if (!previousStatus) setPreviousStatus(orderData.status);
+      }
+
+      setError(null);
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err.response?.data?.message || "Error loading order details");
+    } finally {
+      if (showLoader) {
+        setLoading(false);
+      }
+      if (isManualRefresh) {
+        setRefreshing(false);
+      }
+    }
+  };
+
+  // Initial fetch with Shiprocket sync
+  useEffect(() => {
+    fetchOrderDetails(true, false, true);
   }, [orderId]);
+
+  // ✅ REAL-TIME UPDATES via WebSocket (replaces polling)
+  const handleOrderUpdate = useCallback(
+    (orderUpdate) => {
+      console.log("🔔 Real-time order update received:", orderUpdate);
+
+      // Update order state with new data
+      setOrder((prevOrder) => {
+        if (!prevOrder) return prevOrder;
+
+        return {
+          ...prevOrder,
+          status: orderUpdate.status,
+          paymentStatus: orderUpdate.paymentStatus,
+          statusHistory: orderUpdate.statusHistory,
+          awbCode: orderUpdate.awbCode,
+          courierName: orderUpdate.courierName,
+          trackingUrl: orderUpdate.trackingUrl,
+          scheduledPickupDate: orderUpdate.scheduledPickupDate,
+          pickupTime: orderUpdate.pickupTime,
+          estimatedDeliveryDate: orderUpdate.estimatedDeliveryDate,
+        };
+      });
+
+      // Show toast notification for status change
+      if (previousStatus && orderUpdate.status !== previousStatus) {
+        toast.success(`Order status updated: ${orderUpdate.status}`);
+      }
+
+      setPreviousStatus(orderUpdate.status);
+      setLastUpdated(new Date());
+    },
+    [previousStatus]
+  );
+
+  // Connect to WebSocket for real-time updates
+  useOrderSocket(orderId, handleOrderUpdate);
+
+  // Update "seconds ago" counter every second
+  useEffect(() => {
+    if (!lastUpdated) return;
+
+    const updateCounter = () => {
+      const seconds = Math.floor((new Date() - lastUpdated) / 1000);
+      setSecondsAgo(seconds);
+    };
+
+    updateCounter();
+    const interval = setInterval(updateCounter, 1000);
+    return () => clearInterval(interval);
+  }, [lastUpdated]);
 
   if (loading) return <LoadingState />;
   if (error)
@@ -102,21 +237,6 @@ const OrderDetails = () => {
     }
   };
 
-  const getOrderStepStatus = (step, currentStatus) => {
-    const statusOrder = ["pending", "shipped", "completed"];
-    const currentIndex = statusOrder.indexOf(currentStatus?.toLowerCase());
-    const stepIndex = statusOrder.indexOf(step);
-
-    if (currentStatus?.toLowerCase() === "cancelled") {
-      return step === "cancelled" ? "active" : "inactive";
-    }
-
-    if (stepIndex <= currentIndex) {
-      return stepIndex === currentIndex ? "active" : "completed";
-    }
-    return "pending";
-  };
-
   const handleDownloadInvoice = async () => {
     try {
       const response = await api.get(`/invoices/${orderId}/download`, {
@@ -160,7 +280,13 @@ const OrderDetails = () => {
       setCancellingOrder(true);
       await api.delete(API.ORDERS.CANCEL_PENDING(orderId));
       toast.success("Order cancelled successfully");
-      navigate("/buyer/orders");
+
+      // Refresh cart counter (items were restored to cart after cancellation)
+      await fetchAndSyncCart(dispatch);
+
+      // Refresh to show updated status
+      await fetchOrderDetails(false);
+      setCancellingOrder(false);
     } catch (error) {
       console.error("Error cancelling order:", error);
       toast.error(handleApiError(error));
@@ -200,7 +326,12 @@ const OrderDetails = () => {
             });
 
             toast.success("Payment successful!");
-            window.location.reload();
+
+            // Refresh cart counter (order completed, items removed from cart)
+            await fetchAndSyncCart(dispatch);
+
+            // Refresh order details to show updated status
+            await fetchOrderDetails(false);
           } catch (error) {
             console.error("Payment verification failed:", error);
             toast.error("Payment verification failed. Please try again.");
@@ -251,109 +382,266 @@ const OrderDetails = () => {
     );
   };
 
-  const OrderTrackingBar = ({ status }) => {
-    const steps = [
-      {
-        key: "pending",
-        label: "Order Placed",
-        sublabel: "Your order has been placed successfully",
-        icon: <FiPackage className="w-5 h-5" />,
-      },
-      {
-        key: "shipped",
-        label: "Shipped",
-        sublabel: "Your order has been shipped",
-        icon: <FiTruck className="w-5 h-5" />,
-      },
-      {
-        key: "completed",
-        label: "Delivered",
-        sublabel: "Your order has been delivered",
-        icon: <FiCheckCircle className="w-5 h-5" />,
-      },
-    ];
+  const OrderTrackingBar = ({
+    order,
+    onRefresh,
+    isRefreshing,
+    isLiveSyncing,
+    lastUpdate,
+    timeSinceUpdate,
+  }) => {
+    // Build timeline from actual status history (dynamic)
+    const getRelevantStatuses = () => {
+      if (!order.statusHistory || order.statusHistory.length === 0) {
+        return [
+          {
+            key: order.status,
+            label: order.status,
+            description: "",
+            timestamp: order.createdAt,
+          },
+        ];
+      }
 
-    if (status?.toLowerCase() === "cancelled") {
+      // Map status history to display format
+      const statusDescriptions = {
+        "Payment Pending": "We have received your order",
+        Confirmed: "Your order has been confirmed",
+        Processing: "Seller is preparing your order",
+        Packed: "Your order has been packed",
+        Shipped: "Your order has been shipped",
+        "In Transit": "Your order is on the way",
+        "Out for Delivery": "Your order will be delivered today",
+        Delivered: "Your order has been delivered",
+      };
+
+      return order.statusHistory.map((h) => ({
+        key: h.status,
+        label: h.status,
+        description: h.note || statusDescriptions[h.status] || "",
+        timestamp: h.timestamp,
+      }));
+    };
+
+    // Check if order is cancelled
+    if (
+      order.status === "Cancelled" ||
+      order.status === "Cancellation Requested"
+    ) {
       return (
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-center">
-            <FiXCircle className="w-6 h-6 text-red-500 mr-3" />
-            <span className="text-red-600 font-medium text-lg">
-              Order Cancelled
-            </span>
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            Order Status
+          </h3>
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <FiXCircle className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h4 className="text-base font-semibold text-red-600">
+                {order.status === "Cancellation Requested"
+                  ? "Cancellation Requested"
+                  : "Order Cancelled"}
+              </h4>
+              {order.cancellationReason && (
+                <p className="text-sm text-gray-600 mt-1">
+                  {order.cancellationReason}
+                </p>
+              )}
+              {order.cancelledAt && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {new Date(order.cancelledAt).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       );
     }
 
+    const relevantStatuses = getRelevantStatuses();
+
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">
-          Order Status
-        </h3>
-        <div className="relative">
-          <div className="flex items-start justify-between">
-            {steps.map((step, index) => {
-              const stepStatus = getOrderStepStatus(step.key, status);
-              const isLast = index === steps.length - 1;
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Delivery Status
+            </h3>
+            {isLiveSyncing && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
+                Live Sync
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing || isLiveSyncing}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+              title="Sync from Shiprocket"
+            >
+              <FiRefreshCw
+                className={`w-3.5 h-3.5 ${
+                  isRefreshing || isLiveSyncing ? "animate-spin" : ""
+                }`}
+              />
+              {isLiveSyncing ? "Syncing..." : "Refresh"}
+            </button>
+            {lastUpdate && !isLiveSyncing && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs text-gray-500">
+                  {timeSinceUpdate < 60
+                    ? `${timeSinceUpdate}s ago`
+                    : `${Math.floor(timeSinceUpdate / 60)}m ago`}
+                </span>
+              </div>
+            )}
+            {order.trackingUrl && (
+              <a
+                href={order.trackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Track Shipment →
+              </a>
+            )}
+          </div>
+        </div>
 
-              return (
-                <div key={step.key} className="flex items-start flex-1">
-                  <div className="flex flex-col items-center flex-1">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                        stepStatus === "completed"
-                          ? "bg-green-500 border-green-500 text-white"
-                          : stepStatus === "active"
-                          ? "bg-blue-500 border-blue-500 text-white"
-                          : "bg-white border-gray-300 text-gray-400"
-                      }`}
-                    >
-                      {stepStatus === "completed" ? (
-                        <FiCheckCircle className="w-5 h-5" />
-                      ) : (
-                        step.icon
-                      )}
-                    </div>
-                    <div className="mt-3 text-center flex-1">
-                      <div
-                        className={`text-sm font-medium ${
-                          stepStatus === "completed"
-                            ? "text-green-600"
-                            : stepStatus === "active"
-                            ? "text-blue-600"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {step.label}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {step.sublabel}
-                      </div>
-                    </div>
-                  </div>
+        {/* Vertical Timeline */}
+        <div className="relative">
+          {relevantStatuses.map((status, index) => {
+            const isLast = index === relevantStatuses.length - 1;
+            const isCurrent = status.key === order.status;
+
+            return (
+              <div
+                key={`${status.key}-${index}`}
+                className="flex gap-4 pb-8 last:pb-0"
+              >
+                {/* Timeline */}
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      isCurrent
+                        ? "bg-green-600 ring-4 ring-green-100"
+                        : "bg-green-600"
+                    }`}
+                  />
                   {!isLast && (
-                    <div
-                      className={`flex-1 h-0.5 mx-2 mt-5 ${
-                        stepStatus === "completed"
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                      }`}
-                    />
+                    <div className="w-0.5 h-full bg-green-600 mt-1" />
                   )}
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Content */}
+                <div className="flex-1 -mt-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h4
+                        className={`font-semibold ${
+                          isCurrent ? "text-green-600" : "text-gray-900"
+                        }`}
+                      >
+                        {status.label}
+                      </h4>
+                      <p className="text-sm text-gray-600 mt-0.5">
+                        {status.description}
+                      </p>
+                    </div>
+                    {status.timestamp && (
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs text-gray-500">
+                          {new Date(status.timestamp).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(status.timestamp).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex items-center justify-center">
-            <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
-              <FiClock className="w-4 h-4 mr-2" />
-              Current Status: {status}
+
+        {/* Shipment Details Card */}
+        {(order.awbCode ||
+          order.courierName ||
+          order.estimatedDeliveryDate) && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h4 className="text-sm font-semibold text-gray-900 mb-4">
+              Shipping Information
+            </h4>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+              {order.courierName && (
+                <div className="flex items-center gap-3">
+                  <FiTruck className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Courier Partner</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {order.courierName}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {order.awbCode && (
+                <div className="flex items-center gap-3">
+                  <FiPackage className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Tracking Number</p>
+                    <p className="text-sm font-mono font-semibold text-gray-900">
+                      {order.awbCode}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {order.estimatedDeliveryDate && (
+                <div className="flex items-center gap-3">
+                  <FiClock className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Expected Delivery</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {new Date(order.estimatedDeliveryDate).toLocaleDateString(
+                        "en-US",
+                        {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -453,7 +741,14 @@ const OrderDetails = () => {
       </div>
 
       {/* Order Tracking Bar */}
-      <OrderTrackingBar status={order.status} />
+      <OrderTrackingBar
+        order={order}
+        onRefresh={() => fetchOrderDetails(false, true, true)}
+        isRefreshing={refreshing}
+        isLiveSyncing={isLiveSync}
+        lastUpdate={lastUpdated}
+        timeSinceUpdate={secondsAgo}
+      />
 
       {/* Order Summary */}
       <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { AiOutlineDollar, AiOutlineArrowUp } from "react-icons/ai";
-import { FiDownload } from "react-icons/fi";
+import { FiDownload, FiAlertCircle, FiCheckCircle, FiClock, FiInfo, FiCreditCard } from "react-icons/fi";
 import api from "../../services/apiService";
-import { format } from "date-fns";
+import { format, addDays, nextMonday } from "date-fns";
 import { API, API_CONFIG } from "../../config/api";
+import { toast } from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
 
 const Earnings = () => {
+  const { user } = useAuth();
   const [earningsData, setEarningsData] = useState({
     totalEarnings: 0,
     pendingPayout: 0,
@@ -19,10 +22,12 @@ const Earnings = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalTransactions, setTotalTransactions] = useState(0);
   const [limit] = useState(10);
+  const [bankDetails, setBankDetails] = useState(null);
 
   useEffect(() => {
     fetchEarningsStats();
     fetchTransactions();
+    fetchBankDetails();
   }, [currentPage]);
 
   const fetchEarningsStats = async () => {
@@ -34,6 +39,17 @@ const Earnings = () => {
       setError("Failed to fetch earnings statistics");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBankDetails = async () => {
+    try {
+      const response = await api.get(API.USER.PROFILE);
+      if (response.data.data?.sellerDetails) {
+        setBankDetails(response.data.data.sellerDetails);
+      }
+    } catch (err) {
+      console.error("Error fetching bank details:", err);
     }
   };
 
@@ -121,21 +137,100 @@ const Earnings = () => {
     );
   }
 
-  return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Earnings</h1>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 bg-[#0c0b45] text-white rounded-md hover:bg-[#0c0b45]-dark transition-colors"
-        >
-          <FiDownload />
-          Download Report
-        </button>
-      </div>
+  // Calculate next payout date (next Monday)
+  const getNextPayoutDate = () => {
+    const today = new Date();
+    const next = nextMonday(today);
+    return next;
+  };
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+  const hasBankDetails = !!(
+    bankDetails?.bankName &&
+    bankDetails?.accountNumber &&
+    bankDetails?.ifscCode
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Earnings & Payouts</h1>
+            <p className="text-gray-600">Track your earnings and payout schedule</p>
+          </div>
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 bg-[#0c0b45] text-white rounded-lg hover:bg-[#1a1860] transition-colors shadow-sm"
+          >
+            <FiDownload />
+            Export Report
+          </button>
+        </div>
+
+        {/* Bank Details Alert */}
+        {!hasBankDetails && (
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-900 mb-1">
+                  Bank Details Required for Payouts
+                </h3>
+                <p className="text-sm text-red-700 mb-3">
+                  Please add your bank account details to receive weekly payouts. You can add them in your Account Settings.
+                </p>
+                <a
+                  href="/seller/dashboard/account"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+                >
+                  <FiCreditCard className="w-4 h-4" />
+                  Add Bank Details
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payout Schedule Info */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <FiInfo className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Payout Schedule</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-700 mb-1">
+                    <span className="font-medium">Frequency:</span> Every Monday at 9:00 AM
+                  </p>
+                  <p className="text-gray-700 mb-1">
+                    <span className="font-medium">Hold Period:</span> 7 days after delivery
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="font-medium">Minimum Payout:</span> ₹100
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-700 mb-1">
+                    <span className="font-medium">Commission:</span> 10% platform fee
+                  </p>
+                  <p className="text-gray-700 mb-1">
+                    <span className="font-medium">Processing Time:</span> 1-2 business days
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="font-medium">Next Payout:</span> {format(getNextPayoutDate(), "EEEE, MMM dd, yyyy")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-gray-500 text-sm">Total Earnings</h3>
@@ -154,31 +249,35 @@ const Earnings = () => {
           )}
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-lg shadow-sm border-2 border-yellow-200">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-500 text-sm">Pending Payout</h3>
-            <AiOutlineDollar className="text-yellow-500 text-xl" />
+            <h3 className="text-gray-500 text-sm font-medium">Pending Payout</h3>
+            <FiClock className="text-yellow-600 text-xl" />
           </div>
-          <p className="text-2xl font-semibold text-gray-800">
+          <p className="text-3xl font-bold text-yellow-600">
             ₹{earningsData.pendingPayout?.toLocaleString() || 0}
           </p>
-          {earningsData.nextPayoutDate && (
-            <p className="text-sm text-gray-500 mt-2">
-              Next payout on{" "}
-              {format(new Date(earningsData.nextPayoutDate), "MMM dd, yyyy")}
+          <div className="mt-3 space-y-1">
+            <p className="text-xs text-gray-500">
+              Payout on: {format(getNextPayoutDate(), "EEEE, MMM dd")}
             </p>
-          )}
+            {earningsData.pendingPayout > 0 && (
+              <p className="text-xs text-green-600 font-medium">
+                Available in {Math.ceil((getNextPayoutDate() - new Date()) / (1000 * 60 * 60 * 24))} days
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-lg shadow-sm border-2 border-green-200">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-500 text-sm">Last Payout</h3>
-            <AiOutlineDollar className="text-green-500 text-xl" />
+            <h3 className="text-gray-500 text-sm font-medium">Last Payout</h3>
+            <FiCheckCircle className="text-green-600 text-xl" />
           </div>
-          <p className="text-2xl font-semibold text-gray-800">
+          <p className="text-3xl font-bold text-green-600">
             ₹{earningsData.lastPayout?.amount?.toLocaleString() || 0}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 mt-2">
             {earningsData.lastPayout?.date
               ? `Paid on ${format(
                   new Date(earningsData.lastPayout.date),
@@ -186,6 +285,42 @@ const Earnings = () => {
                 )}`
               : "No payouts yet"}
           </p>
+        </div>
+
+        {/* Bank Details Card */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-gray-500 text-sm font-medium">Bank Account</h3>
+            <FiCreditCard className="text-blue-600 text-xl" />
+          </div>
+          {hasBankDetails ? (
+            <div className="space-y-2">
+              <div>
+                <p className="text-xs text-gray-500">Bank Name</p>
+                <p className="text-sm font-semibold text-gray-900">{bankDetails.bankName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Account Number</p>
+                <p className="text-sm font-mono font-semibold text-gray-900">
+                  ****{bankDetails.accountNumber?.slice(-4)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">IFSC Code</p>
+                <p className="text-sm font-mono text-gray-900">{bankDetails.ifscCode}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-2">
+              <p className="text-sm text-gray-500 mb-2">No bank details added</p>
+              <a
+                href="/seller/dashboard/account"
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Add Now →
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
@@ -369,6 +504,7 @@ const Earnings = () => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
